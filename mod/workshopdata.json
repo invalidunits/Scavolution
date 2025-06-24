@@ -1,0 +1,17 @@
+{
+  "Title": "Scavolution",
+  "Description": "[h1] Scavenger Evolution [/h1]\r\n\r\n[b]Scavolution[/b] is a mod which allows you to upgrade your scavengers by giving them certain items. Scavengers now have a new goal to deposit certain items in dens. After a sucessful deposit (or if the cycle ends with the item in their hand), the scavenger will [b]evolve[/b] into a new varient. Scavengers will express there gratitude by becoming friendly towards you after helping them evolve. You can use this to obtain items usually unobtainable or very hard to obtain for most Slugcats.\r\n\r\n[b]Requires DLC (Either MSC or The Watcher)[/b] \r\n\r\nCurrent Recipes (Creature \u002B Item  =\u003E Evolution)\r\n\r\nAny DLC Upgrades\r\nScavenger \u002B [b]Vulture/Elite Mask[/b] =\u003E [b]Elite[/b] Scavenger    \r\nScavenger \u002B [b]Singularity Bomb[/b] =\u003E [b]Elite[/b] Scavenger\r\n\r\nWatcher Upgrades\r\nScavenger \u002B [b]Karma flower[/b] =\u003E Scavenger [b]Templar[/b]\r\nScavenger \u002B [b]Boomerang[/b] =\u003E Scavenger [b]Templar[/b]\r\n[b]Elite[/b] Scavenger \u002B [b]Boomerang[/b] =\u003E Scavenger [b]Disciple[/b]\r\n[b]Elite[/b] Scavenger \u002B [b]Karma flower[/b] =\u003E Scavenger [b]Disciple[/b]\r\n[b]Templar[/b] Scavenger \u002B [b]Karma flower[/b] =\u003E Scavenger [b]Disciple[/b]\r\n\r\n\r\n[h2] RoadMap (\u2753 = Unimplemented  \u2705 = Implemented ) [/h2]\r\n[list]\r\n    [*]\u2705 Evolving/Upgrading Scavengers.\r\n    [*]\u2753 Add new Scavenger varients through evolution. \r\nI have a couple of good scavenger Ideas, I\u2019ll leave the names of two them here, try to guess what they do \uD83D\uDE09:\r\nScavenger Junior, Braided Scavenger, Imperial Scavenger.\r\n    [*]\u2753 New passage: The Innovator\r\n    [*]\u2753 Revive Scavengers? Possibly with Templar magic?\r\n    [*]\u2753 New Echo in Garbage Wastes?\r\n    [*]\u2753 Legendary Scavengers that would appear after evolving a large amount of scavengers in a region.\r\n[/list]\r\n\r\n[h2] Incompatibilities [/h2]\r\n    Likely RainMeadow because it messes around how scavengers are saved.",
+  "ID": "invalidunits.scavolution",
+  "Version": "v1.0",
+  "TargetGameVersion": "v1.9.06",
+  "Requirements": "",
+  "RequirementNames": "",
+  "Authors": "invalidunits",
+  "Visibility": "Unlisted",
+  "Tags": [
+    "Game Mechanics"
+  ],
+  "WorkshopID": 3488413283,
+  "UploadFilesOnly": false,
+  "UploadThumbnail": false
+}

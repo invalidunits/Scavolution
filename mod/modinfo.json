@@ -1,0 +1,12 @@
+{
+    "id": "invalidunits.scavolution",
+    "name": "Scavolution",
+    "version": "v1.0",
+    "requirements": [],
+    "requirements_names": [],
+    "target_game_version": "v1.10.4",
+    "authors": "invalidunits",
+    "description": "Scavolution is a mod which allows you to upgrade your scavengers by giving them certain items.",
+    "tags": ["Game Mechanics"],
+    "checksum_override_version": true
+}
