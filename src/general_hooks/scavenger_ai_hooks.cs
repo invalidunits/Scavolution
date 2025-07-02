@@ -33,6 +33,11 @@ namespace Scavolution
             {
                 if (self.followCreature.creatureTemplate.TopAncestor().type == CreatureTemplate.Type.Slugcat) return false;
             }
+
+            if (self.followCreature?.abstractAI is ScavengerAbstractAI scavAI)
+            {
+                if (scavAI.GoHome()) return true;
+            }
             
             return orig(self);
         }

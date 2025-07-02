@@ -260,57 +260,54 @@ namespace Scavolution
 
         public void StaticWorld_InitCustomTemplates(On.StaticWorld.orig_InitCustomTemplates orig)
         {
-            Logger.LogDebug("Initializing Scavenger Junior");
+            
             orig();
 
-            Logger.LogDebug(new StackTrace().ToString());
-            if (ScavengerJuniorTemplate == null)
-            {
-                List<TileTypeResistance> tile_resistance = new List<TileTypeResistance>();
-                List<TileConnectionResistance> tile_connection_resistance = new List<TileConnectionResistance>();
-                ScavengerJuniorTemplate = new CreatureTemplate(SECreatureEnums.ScavengerJunior,
-                    StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.Scavenger),
-                    tile_resistance,
-                    tile_connection_resistance,
-                    new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Uncomfortable, 0.2f)
-                );
-                ScavengerJuniorTemplate.BlizzardWanderer = false;
-                ScavengerJuniorTemplate.BlizzardAdapted = false;
-                ScavengerJuniorTemplate.baseDamageResistance = 1.5f;
-                ScavengerJuniorTemplate.baseStunResistance = 0.8f;
-                ScavengerJuniorTemplate.instantDeathDamageLimit = 1.0f;
+            Logger.LogDebug("Initializing Scavenger Junior");
+            List<TileTypeResistance> tile_resistance = new List<TileTypeResistance>();
+            List<TileConnectionResistance> tile_connection_resistance = new List<TileConnectionResistance>();
+            ScavengerJuniorTemplate = new CreatureTemplate(SECreatureEnums.ScavengerJunior,
+                StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.Scavenger),
+                tile_resistance,
+                tile_connection_resistance,
+                new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Uncomfortable, 0.4f)
+            );
+            ScavengerJuniorTemplate.BlizzardWanderer = false;
+            ScavengerJuniorTemplate.BlizzardAdapted = false;
+            ScavengerJuniorTemplate.baseDamageResistance = 1.5f;
+            ScavengerJuniorTemplate.baseStunResistance = 0.8f;
+            ScavengerJuniorTemplate.instantDeathDamageLimit = 1.0f;
 
-                ScavengerJuniorTemplate.offScreenSpeed = 1.25f;
-                ScavengerJuniorTemplate.grasps = 2;
-                ScavengerJuniorTemplate.AI = true;
-                ScavengerJuniorTemplate.requireAImap = true;
-                ScavengerJuniorTemplate.abstractedLaziness = 50;
-                ScavengerJuniorTemplate.bodySize = 0.8f;
-                ScavengerJuniorTemplate.doPreBakedPathing = false;
-                ScavengerJuniorTemplate.preBakedPathingAncestor = StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.StandardGroundCreature);
-                ScavengerJuniorTemplate.stowFoodInDen = false;
-                ScavengerJuniorTemplate.shortcutSegments = 1;
+            ScavengerJuniorTemplate.offScreenSpeed = 1.25f;
+            ScavengerJuniorTemplate.grasps = 2;
+            ScavengerJuniorTemplate.AI = true;
+            ScavengerJuniorTemplate.requireAImap = true;
+            ScavengerJuniorTemplate.abstractedLaziness = 50;
+            ScavengerJuniorTemplate.bodySize = 0.8f;
+            ScavengerJuniorTemplate.doPreBakedPathing = false;
+            ScavengerJuniorTemplate.preBakedPathingAncestor = StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.StandardGroundCreature);
+            ScavengerJuniorTemplate.stowFoodInDen = false;
+            ScavengerJuniorTemplate.shortcutSegments = 1;
 
-                ScavengerJuniorTemplate.visualRadius = 1000f;
-                ScavengerJuniorTemplate.movementBasedVision = 0.3f;
+            ScavengerJuniorTemplate.visualRadius = 1000f;
+            ScavengerJuniorTemplate.movementBasedVision = 0.3f;
 
-                ScavengerJuniorTemplate.waterRelationship = CreatureTemplate.WaterRelationship.AirAndSurface;
-                ScavengerJuniorTemplate.hibernateOffScreen = true;
-                ScavengerJuniorTemplate.roamBetweenRoomsChance = -1f;
-                ScavengerJuniorTemplate.roamInRoomChance = -1f;
-                ScavengerJuniorTemplate.socialMemory = true;
-                ScavengerJuniorTemplate.communityID = CreatureCommunities.CommunityID.Scavengers;
-                ScavengerJuniorTemplate.communityInfluence = 2f;
-                ScavengerJuniorTemplate.dangerousToPlayer = 0.1f;
+            ScavengerJuniorTemplate.waterRelationship = CreatureTemplate.WaterRelationship.AirAndSurface;
+            ScavengerJuniorTemplate.hibernateOffScreen = true;
+            ScavengerJuniorTemplate.roamBetweenRoomsChance = -1f;
+            ScavengerJuniorTemplate.roamInRoomChance = -1f;
+            ScavengerJuniorTemplate.socialMemory = true;
+            ScavengerJuniorTemplate.communityID = CreatureCommunities.CommunityID.Scavengers;
+            ScavengerJuniorTemplate.communityInfluence = 2f;
+            ScavengerJuniorTemplate.dangerousToPlayer = 0.1f;
 
-                ScavengerJuniorTemplate.meatPoints = 2;
-                ScavengerJuniorTemplate.usesNPCTransportation = true;
-                ScavengerJuniorTemplate.usesRegionTransportation = true;
-                ScavengerJuniorTemplate.usesCreatureHoles = false;
-                ScavengerJuniorTemplate.jumpAction = "Jump";
-                ScavengerJuniorTemplate.pickupAction = "Pick Up";
-                ScavengerJuniorTemplate.throwAction = "Throw";
-            }
+            ScavengerJuniorTemplate.meatPoints = 2;
+            ScavengerJuniorTemplate.usesNPCTransportation = true;
+            ScavengerJuniorTemplate.usesRegionTransportation = true;
+            ScavengerJuniorTemplate.usesCreatureHoles = false;
+            ScavengerJuniorTemplate.jumpAction = "Jump";
+            ScavengerJuniorTemplate.pickupAction = "Pick Up";
+            ScavengerJuniorTemplate.throwAction = "Throw";
 
             for (int i = 0; i < StaticWorld.creatureTemplates.Length; i++)
             {

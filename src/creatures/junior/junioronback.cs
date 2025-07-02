@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
@@ -37,8 +38,10 @@ namespace Scavolution
         {
             if (this.increment)
             {
+                var backpacktime = this.owner is Player ? 20 : 100;
+
                 this.counter++;
-                if (this.counter > 20)
+                if (this.counter > backpacktime)
                 {
                     if (this.scavenger != null)
                     {
@@ -47,7 +50,7 @@ namespace Scavolution
                     }
                     else if (this.scavenger == null)
                     {
-                        for (int i = 0; i < 2; i++)
+                        for (int i = 0; i < this.owner.grasps.Length; i++)
                         {
                             if (this.owner.grasps[i] != null && this.owner.grasps[i].grabbed is Scavenger scav && scav.isJunior())
                             {
@@ -104,28 +107,54 @@ namespace Scavolution
 
                 scavenger.bodyChunks[0].vel = owner.mainBodyChunk.vel; // torsoe
                 scavenger.bodyChunks[1].vel = Vector2.Lerp(scavenger.bodyChunks[1].vel, owner.mainBodyChunk.vel, 0.5f); // legs
-                // no vel sync for head
+                                                                                                                        // no vel sync for head
 
-                
-                if (ModManager.DLCShared)
-                {
-                    if (scavenger.animation != null)
-                    {
-                        if (scavenger.animation.id != DLCSharedEnums.ScavengerAnimationID.Jumping)
-                            scavenger.animation = new Scavenger.JumpingAnimation(scavenger);
-                    }
-                }
+
+                // if (ModManager.DLCShared)
+                // {
+                //     if (scavenger.animation != null)
+                //     {
+                //         if (scavenger.animation.id != DLCSharedEnums.ScavengerAnimationID.Jumping)
+                //             scavenger.animation = new Scavenger.JumpingAnimation(scavenger);
+                //     }
+                // }
 
                 scavenger.movMode = Scavenger.MovementMode.StandStill;
             }
 
-            if (owner is Scavenger)
+            if (owner is Scavenger scav_holder)
             {
-                // TODO: scav on scav action
+                Vector2 headpos = scav_holder.bodyChunks[2].pos;
+                headpos += new Vector2(-scav_holder.flip * 5f, 23f);
+
+                scavenger.flip = Mathf.Lerp(scavenger.flip, scav_holder.flip, 0.8f);
+
+                var offset = headpos - scavenger.bodyChunks[0].pos;
+                scavenger.bodyChunks[0].RelativeMoveFromOutsideMyUpdate(eu, offset);
+                scavenger.bodyChunks[1].RelativeMoveFromOutsideMyUpdate(eu, offset);
+                scavenger.bodyChunks[2].RelativeMoveFromOutsideMyUpdate(eu, offset);
+
+                scavenger.bodyChunks[0].vel = scav_holder.bodyChunks[2].vel; // torsoe
+                scavenger.bodyChunks[1].vel = Vector2.Lerp(scavenger.bodyChunks[1].vel, scav_holder.bodyChunks[2].vel, 0.5f); // legs
+
+
+                // if (ModManager.DLCShared)
+                // {
+                //     if (scavenger.animation != null)
+                //     {
+                //         if (scavenger.animation.id != DLCSharedEnums.ScavengerAnimationID.Jumping)
+                //             scavenger.animation = new Scavenger.JumpingAnimation(scavenger);
+                //     }
+                // }
+
+                scavenger.movMode = Scavenger.MovementMode.StandStill;
+                scavenger.moveModeChangeCounter = 0;
             }
         }
         public void ScavtoHand()
         {
+            if (scavenger == null) return;
+
             if (this.owner is Player p)
             {
                 if (p.FreeHand() is int a && a != -1)
@@ -140,8 +169,13 @@ namespace Scavolution
                     {
                         ScavolutionPlugin.JuniorNuisanceImmunity = oldimmunity;
                     }
-                    
+
                 }
+            }
+
+            if (this.owner is Scavenger scav_holder)
+            {
+                scav_holder.PickUpAndPlaceInInventory(scavenger, true);
             }
 
             ChangeOverlap(true);
@@ -256,22 +290,296 @@ namespace Scavolution
             new Hook(typeof(Player).GetProperty(nameof(Player.CanRetrieveSlugFromBack)).GetGetMethod(), PutToBackJuniorFirst);
             new Hook(typeof(Player).GetProperty(nameof(Player.CanRetrieveSpearFromBack)).GetGetMethod(), PutToBackJuniorFirst);
 
+            // scav on players back
             On.Player.Grabability += Player_GrababilityJunior;
             On.Player.GraphicsModuleUpdated += Player_GraphicsModuleUpdatedJuniorOnBack;
             IL.Player.GrabUpdate += Player_GrabUpdateJuniorOnBack;
             On.Player.GrabUpdate += Player_UpdateJuniorOnBack;
             On.Player.CanIPickThisUp += Player_CanIPickThisUpJunior;
-            On.Player.Destroy += Player_DestroyJuniorOnBack;
+            On.UpdatableAndDeletable.Destroy += UpdatableAndDeletable_DestroyJuniorOnBack;
 
+            // scav on scav back
             On.Scavenger.RecreateSticksFromAbstract += JuniorOnBack_Scavenger_RecreateSticksFromAbstract;
-            On.Scavenger.RecreateSticksFromAbstract += JuniorOnBack_Scavenger_RecreateSticksFromAbstract;
+            On.Scavenger.Update += ScavengerJunior_Scavenger_UpdateOnBack;
+            IL.Scavenger.GraphicsModuleUpdated += ScavengerJunior_Scavenger_GraphicsModuleUpdated;
+            On.Scavenger.Grab += ScavengerJunior_Scavenger_Grab;
+
+            new Hook(typeof(ScavengerAI).GetProperty(nameof(ScavengerAI.HoldWeapon)).GetGetMethod(), ScavengerJunior_ScavengerAI_HoldWeapon);
+            On.ScavengerGraphics.ScavengerHand.Update += ScavengerJunior_ScavengerGraphics_ScavengerHand_Update;
+
+
+            // dont hit juniors on my back
+            On.Weapon.HitThisObject += ScavengerJunior_Weapon_HitThisObject;
+            IL.Scavenger.MidRangeUpdate += ScavengerJunior_Scavenger_MidRangeUpdate;
+
+        }
+        void ScavengerJunior_Scavenger_MidRangeUpdate(ILContext context)
+        {
+            try
+            {
+                ILCursor cursor = new(context);
+                // 237	02EF	ldfld	class CreatureTemplate/Relationship/Type CreatureTemplate/Relationship::'type'
+                // 238	02F4	ldsfld	class CreatureTemplate/Relationship/Type CreatureTemplate/Relationship/Type::Pack
+                // 239	02F9	call	bool class ExtEnum`1<class CreatureTemplate/Relationship/Type>::op_Equality(class ExtEnum`1<!0>, class ExtEnum`1<!0>)
+                // 240	02FE	brfalse	304 (03F8) ldloc.s V_7 (7)
+
+                ILLabel skip = null!;
+                cursor.GotoNext(MoveType.After,
+                    x => x.MatchLdfld<CreatureTemplate.Relationship>(nameof(CreatureTemplate.Relationship.type)),
+                    x => x.MatchLdsfld<CreatureTemplate.Relationship.Type>(nameof(CreatureTemplate.Relationship.Type.Pack)),
+                    x => true,
+                    x => x.MatchBrfalse(out skip)
+                );
+
+                cursor.Emit(OpCodes.Ldarg_0);
+                cursor.Emit(OpCodes.Ldloc, 7); // index into this.AI.tracker.GetRep() in for loop
+                cursor.EmitDelegate((Scavenger self, int creatureTrackedIndex) =>
+                {
+                    var creature = self.AI.tracker.GetRep(creatureTrackedIndex)?.representedCreature?.realizedCreature;
+                    if (creature is not null)
+                    {
+                        if (self.GetJuniorOnBack().scavenger == creature)
+                        {
+                            return false;
+                        }
+
+                        if (creature is Scavenger)
+                        {
+                            if (self.grasps.Where(x => x is not null && x.grabbed == creature).FirstOrDefault() is not null)
+                            {
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                });
+                
+                cursor.Emit(OpCodes.Brfalse, skip);
+            }
+
+
+            catch (Exception except)
+            {
+                Logger.LogDebug(except);
+            }
+            
         }
 
-        bool ScangerJunior_WantToPiggyBack(ScavengerAI scav)
+
+        bool ScavengerJunior_Weapon_HitThisObject(On.Weapon.orig_HitThisObject orig, Weapon self, global::PhysicalObject obj) {
+            try
+            {
+                if (obj is Scavenger scav)
+                {
+                    if (JuniorOnBack.onback_map.TryGetValue(scav, out var junioronback) && junioronback.owner == self.thrownBy)
+                    {
+                        return false;
+                    }
+
+                    if (self.thrownBy is Creature thrower)
+                    {
+                        if (thrower.grasps.Where(x => x is not null && x.grabbed == scav).FirstOrDefault() is not null)
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+            catch (Exception except)
+            {
+                Logger.LogDebug(except);   
+            }
+
+            return orig(self, obj);
+        }
+
+        void ScavengerJunior_Scavenger_UpdateOnBack(On.Scavenger.orig_Update orig, Scavenger self, bool eu)
         {
+            try
+            {
+                var onback = self.GetJuniorOnBack();
+                foreach (Creature.Grasp grasp in self.grasps.Where(x => x is not null))
+                {
+                    if (grasp.grabbed is Scavenger scav)
+                    {
+                        if (ParentalParams.getOrAdd(scav.AI).wantCarryTimer > 0)
+                        {
+                            if (onback.scavenger == null)
+                            {
+                                onback.increment = true;
+                            }
+                        }
+                        else
+                        {
+                            grasp.Release();   
+                        }
+                    }
+                }
+
+                if (onback.scavenger is not null)
+                {
+                    if (ParentalParams.getOrAdd(onback.scavenger.AI).wantCarryTimer <= 0)
+                    {
+                        onback.increment = true;
+                    }
+                }
+
+                onback.Update();                
+            }
+            catch (Exception except)
+            {
+                Logger.LogError(except);
+            }
+            orig(self, eu);
+        }
+
+        bool ScavengerJunior_ScavengerAI_HoldWeapon(Func<ScavengerAI, bool> orig, ScavengerAI self)
+        {
+            if (self.scavenger.grabbedBy.Where(x => x.grabber is Scavenger).FirstOrDefault() is Creature.Grasp)
+            {
+                return false;
+            }
+        
+            return orig(self);
+
+        }
+
+        void ScavengerJunior_ScavengerGraphics_ScavengerHand_Update(On.ScavengerGraphics.ScavengerHand.orig_Update orig, ScavengerGraphics.ScavengerHand self)
+        {
+            orig(self);
+            try
+            {
+                if (self.limbNumber == 0)
+                {
+                    if (self.scavenger.grabbedBy.Where(x => x.grabber is Scavenger).FirstOrDefault() is Creature.Grasp grabbedBy)
+                    {
+                        Scavenger grabber = (Scavenger)grabbedBy.grabber;
+                        if (grabber.graphicsModule is ScavengerGraphics grabber_graphics)
+                        {
+                            Vector2 difference = self.scavenger.mainBodyChunk.pos - (Vector2)grabber_graphics.ItemPosition(grabbedBy.graspUsed);
+                            self.absoluteHuntPos = self.scavenger.mainBodyChunk.pos - (difference / grab_raidus) * self.armLength * 0.35f;
+                            self.mode = Limb.Mode.HuntAbsolutePosition;
+                        }
+                    }
+                }
+
+                if (self.limbNumber == 1)
+                {
+                    if (self.scavenger.grasps.Where(x => x != null && x.grabbed is Scavenger).FirstOrDefault() is Creature.Grasp grabbing)
+                    {
+                        Scavenger grabbed = (Scavenger)grabbing.grabber;
+                        Vector2 difference = grabbed.mainBodyChunk.pos - (Vector2)self.graphics.ItemPosition(grabbing.graspUsed);
+                        self.absoluteHuntPos = grabbed.mainBodyChunk.pos - (difference / grab_raidus) * self.armLength * 0.35f;
+                        self.mode = Limb.Mode.HuntAbsolutePosition;
+                    }
+                }
+            }
+            catch (Exception except)
+            {
+                Logger.LogError(except);
+            }
+            
+        }
+        const float grab_raidus = 35f;
+        void ScavengerJunior_Scavenger_GraphicsModuleUpdated(ILContext context)
+        {
+            try
+            {
+                ILCursor cursor = new(context);
+                cursor.Emit(OpCodes.Ldarg_0);
+                cursor.Emit(OpCodes.Ldarg_1);
+                cursor.Emit(OpCodes.Ldarg_2);
+                cursor.EmitDelegate((Scavenger self, bool actuallyViewed, bool eu) =>
+                {
+                    var onback = self.GetJuniorOnBack();
+                    onback.GraphicsModuleUpdated(actuallyViewed, eu);
+                });
+
+
+
+                int item_loc = 1;
+                int item_pos_loc = 2;
+
+                //38	0077	stloc.2
+                cursor.GotoNext(MoveType.After,
+                    x => x.MatchStloc(item_pos_loc)
+                );
+
+                cursor.Emit(OpCodes.Ldarg_0);
+                cursor.Emit(OpCodes.Ldloc, item_loc);
+                cursor.Emit(OpCodes.Ldloc, item_pos_loc);
+                cursor.Emit(OpCodes.Ldarg_2);
+                cursor.EmitDelegate((Scavenger self, PhysicalObject grabbed_obj, Vector2 itemPos, bool eu) =>
+                {
+                    if (grabbed_obj is Scavenger scav)
+                    {
+                        Vector2 difference = scav.mainBodyChunk.pos - itemPos;
+
+                        if (difference.sqrMagnitude > grab_raidus * grab_raidus)
+                        {
+                            Vector2 difference_normal = difference.normalized;
+                            Vector2 targetpos = itemPos + difference_normal * grab_raidus;
+                            scav.mainBodyChunk.MoveFromOutsideMyUpdate(eu, targetpos);
+
+                            var leaving_magnitude = Vector2.Dot(scav.mainBodyChunk.vel, difference_normal);
+                            var weightdiff = scav.TotalMass / self.TotalMass;
+                            if (leaving_magnitude > 0f)
+                            {
+                                var leaving_vel = difference_normal * leaving_magnitude;
+                                scav.mainBodyChunk.vel -= leaving_vel * 0.5f * Math.Max(weightdiff, 1.0f);
+                                self.mainBodyChunk.vel += leaving_vel * (1.0f / weightdiff) * 0.01f;
+                            }
+
+                            scav.abstractCreature.abstractAI.SetDestination(self.abstractCreature.abstractAI.destination);
+                            scav.AI.pathFinder.SetDestination(self.abstractCreature.abstractAI.destination);
+                            scav.AI.runSpeedGoal = self.AI.runSpeedGoal;
+
+                            if (scav.grasps[0] != null && self.Consious)
+                            {
+                                scav.ArrangeInventory();
+                            }
+                        }
+
+                        return true;
+                    }
+
+                    return false;
+                });
+
+                cursor.FindNext(out var ret_cursor, x => x.Match(OpCodes.Ret));
+                cursor.Emit(OpCodes.Brtrue, ret_cursor[0].MarkLabel());
+            }
+            catch (Exception except)
+            {
+                Logger.LogError(except);
+            }
+        }
+
+        bool ScavengerJunior_Scavenger_Grab(On.Scavenger.orig_Grab orig, Scavenger self, PhysicalObject obj, int graspUsed, int chunkGrabbed, Creature.Grasp.Shareability shareability, float dominance, bool overrideEquallyDominant, bool pacifying)
+        {
+            try
+            {
+                if (obj is Scavenger scavcarry)
+                {
+                    pacifying = false;
+                }
+            }
+            catch (Exception except)
+            {
+                Logger.LogError(except);
+            }
+            return orig(self, obj, graspUsed, chunkGrabbed, shareability, dominance, overrideEquallyDominant, pacifying);
+        }
+
+        bool ScangerJunior_WantToBeHeld(ScavengerAI scav, ScavengerAI grabber)
+        {
+            if ((scav.creature.abstractAI as ScavengerAbstractAI)!.GoHome()) return false;
+            if (scav.creature.controlled) return false;
             if (!ScavengerParentTracker.map.TryGetValue(scav, out var parentTracker)) return false;
-            if (parentTracker.tiredness > 20) return true;
-            if (scav.threatTracker.Utility() > 0.5f) return true;
+            if (parentTracker.tiredness > 100) return true;
+            if (scav.threatTracker.Utility() > 0.6) return true;
+            if (grabber.threatTracker.Utility() > 0.6) return true;
+            if (grabber.agitation > 0.7) return true;
             return false;
         }
 
@@ -280,7 +588,15 @@ namespace Scavolution
             orig(self);
             try
             {
-                foreach (AbstractPhysicalObject.AbstractObjectStick stick in self.abstractCreature.stuckObjects)
+                foreach (Creature.Grasp grasp in self.grasps.Where(x => x != null))
+                {
+                    if (grasp.pacifying && grasp.grabbed is Scavenger)
+                    {
+                        grasp.pacifying = false;
+                    }
+                }
+
+                foreach (AbstractPhysicalObject.AbstractObjectStick stick in self.abstractCreature.stuckObjects.ToList())
                 {
                     if (stick.A != self.abstractCreature) continue;
                     if (stick is JuniorOnBack.AbstractJuniorOnBackStick)
@@ -297,18 +613,22 @@ namespace Scavolution
 
         }
 
-        void Player_DestroyJuniorOnBack(On.Player.orig_Destroy orig, Player self)
+        void UpdatableAndDeletable_DestroyJuniorOnBack(On.UpdatableAndDeletable.orig_Destroy orig, UpdatableAndDeletable self)
         {
             orig(self);
             try
             {
-                self.GetJuniorOnBack().ChangeOverlap(true);
+                if (self is Creature critter && (critter is Player || critter is Scavenger))
+                {
+                    critter.GetJuniorOnBack().ChangeOverlap(true);
+                } 
             }
             catch (Exception except)
             {
                 Logger.LogError(except);
             }
         }
+
         bool Player_CanIPickThisUpJunior(On.Player.orig_CanIPickThisUp orig, global::Player self, global::PhysicalObject obj)
         {
             if (obj is Scavenger scav)
@@ -444,7 +764,13 @@ namespace Scavolution
 
                 if (obj.grabbedBy.FirstOrDefault() is Creature.Grasp grasp)
                 {
-                    if (grasp.grabber is Scavenger scav2 && scav2.isJunior()) return Player.ObjectGrabability.CantGrab;
+                    if (grasp.grabber is Scavenger scav2 && scav2.isJunior())
+                    {
+                        if (scav2.grabbedBy.Count() <= 0)
+                        {
+                            return Player.ObjectGrabability.CantGrab;
+                        }
+                    } 
                 }
             }
             catch (Exception except)

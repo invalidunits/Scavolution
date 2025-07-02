@@ -58,14 +58,13 @@ namespace Scavolution
                         var random = new System.Random();
                         for (int i = 0; i < evolution_tracker.successfulUpgrade.Value.max_juniors_spawned; i++)
                         {
-                            if (random.Next() % 3 < 2)
+                            if (random.Next() % 4 < 3)
                             {
-                                ScavolutionPlugin.pubLogger?.LogDebug("Spawning Scavenger Junior!");
-
                                 var junior = new AbstractCreature(self.world, StaticWorld.GetCreatureTemplate(SECreatureEnums.ScavengerJunior), null, worldCoordinate, self.world.game.GetNewID());
                                 junior.abstractAI.denPosition = worldCoordinate;
                                 junior.spawnDen = worldCoordinate;
                                 junior.pos = worldCoordinate;
+                                ScavolutionPlugin.pubLogger?.LogDebug($"Spawning Scavenger Junior! {junior} with parent {critter}");
                                 JuniorState state = (JuniorState)junior.state;
                                 state.currentParent = critter.ID.number;
                                 self.savedPopulation.Add(self.CreatureToStringInDenPos(junior, validSaveShelter, activeGate));
