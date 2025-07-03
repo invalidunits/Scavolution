@@ -27,15 +27,20 @@ namespace Scavolution
                 Logger.LogDebug("Initializing Scavolution");
                 EvolutionTree.InitializeEvolutions();
                 Logger.LogDebug("Finished Evolution Init");
+
                 ScavengerAIHooks();
                 SaveHooks();
-
                 Logger.LogDebug("Finished Hooking AI And Save.");
+
                 SECreatureEnums.RegisterEnums();
                 SESocialEvent.RegisterEnums();
                 SEScavengerBehaviors.RegisterEnums();
-                Logger.LogDebug("Finished RegisterEnums.");
+                SEMultiplayerUnlocks.RegisterEnums();
+
+                Logger.LogDebug("Finished registering Enums.");
+
                 RegisterScavengerJunior();
+                Logger.LogDebug("Finished registering scav junior");
 
                 On.Menu.MainMenu.ctor += MainMenu_ctor;
 

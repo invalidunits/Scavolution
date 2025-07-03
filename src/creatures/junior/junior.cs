@@ -32,37 +32,55 @@ namespace Scavolution
     {
         void RegisterScavengerJunior()
         {
-            Logger.LogDebug("Registering scav junior");
+            
 
             // registered stuff
-                On.StaticWorld.InitCustomTemplates += StaticWorld_InitCustomTemplates;
-                On.CreatureTemplate.ctor_Type_CreatureTemplate_List1_List1_Relationship += CreatureTemplate_ctor;
-                On.AbstractCreature.ctor += AbstractCreature_ctor;
+            On.StaticWorld.InitCustomTemplates += StaticWorld_InitCustomTemplates;
+            On.CreatureTemplate.ctor_Type_CreatureTemplate_List1_List1_Relationship += CreatureTemplate_ctor;
+            On.AbstractCreature.ctor += AbstractCreature_ctor;
 
             // gameplay stuff
-                JuniorAIHooks();
-                JuniorOnBackHooks();
+            JuniorAIHooks();
+            JuniorOnBackHooks();
 
-                // Gear
-                On.ScavengerAbstractAI.InitGearUp += AbstractScavengerAI_InitGearUP;
-                On.ScavengerAbstractAI.ReGearInDen += AbstractScavengerAI_ReGearInDen;
+            // Gear
+            On.ScavengerAbstractAI.InitGearUp += AbstractScavengerAI_InitGearUP;
+            On.ScavengerAbstractAI.ReGearInDen += AbstractScavengerAI_ReGearInDen;
 
-                // Weight
-                IL.Scavenger.Update += Scanger_UpdateScavengerJumpJunior;
-                IL.Scavenger.Update += Scanvenger_UpdateJuniorMass;
+            // Weight
+            IL.Scavenger.Update += Scavenger_UpdateScavengerJumpJunior;
+            IL.Scavenger.Update += Scanvenger_UpdateJuniorMass;
 
             // graphical stuff
-                IL.ScavengerGraphics.ctor += ScavengerGraphics_ctorJunior;
-                IL.ScavengerGraphics.ScavengerHand.DrawSprites_SpriteLeaser_RoomCamera_float_float2 += ScavengerHand_DrawSprites;
-                On.ScavengerGraphics.ScavengerLeg.ctor += ScavengerLeg_ctor;
-                On.ScavengerGraphics.ScavengerHand.ctor += ScavengerHand_ctor;
-                On.ScavengerGraphics.ctor += ScavengerGraphics_ctor;
-                On.ScavengerGraphics.DrawSprites += ScavengerGraphics_DrawSprites;
-                On.Scavenger.ctor += Scavenger_ctor;
+            IL.ScavengerGraphics.ctor += ScavengerGraphics_ctorJunior;
+            IL.ScavengerGraphics.ScavengerHand.DrawSprites_SpriteLeaser_RoomCamera_float_float2 += ScavengerHand_DrawSprites;
+            On.ScavengerGraphics.ScavengerLeg.ctor += ScavengerLeg_ctor;
+            On.ScavengerGraphics.ScavengerHand.ctor += ScavengerHand_ctor;
+            On.ScavengerGraphics.ctor += ScavengerGraphics_ctor;
+            On.ScavengerGraphics.DrawSprites += ScavengerGraphics_DrawSprites;
+            On.Scavenger.ctor += Scavenger_ctor;
+
+
+            // Arena stuff
+            if (!Futile.atlasManager.DoesContainAtlas("atlases/Kill_ScavengerJunior"))
+            {
+                Futile.atlasManager.LoadImage("atlases/Kill_ScavengerJunior");
+            }
+            On.CreatureSymbol.SpriteNameOfCreature += ScavengerJunior_CreatureSymbol_SpriteNameOfCreature;
+            On.MultiplayerUnlocks.SandboxItemUnlocked += ScavengerJunior_MultiplayerUnlocks_SandboxItemUnlocked;
         }
 
+        bool ScavengerJunior_MultiplayerUnlocks_SandboxItemUnlocked(On.MultiplayerUnlocks.orig_SandboxItemUnlocked orig, MultiplayerUnlocks self, MultiplayerUnlocks.SandboxUnlockID unlockID)
+        {
+            if (unlockID == SEMultiplayerUnlocks.ScavengerJunior)
+            {
+                return self.SandboxItemUnlocked(MultiplayerUnlocks.SandboxUnlockID.Scavenger);
+            }
 
-        void Scanger_UpdateScavengerJumpJunior(ILContext context)
+            return orig(self, unlockID);
+        }
+
+        void Scavenger_UpdateScavengerJumpJunior(ILContext context)
         {
             /*
                 483	05D5	call	instance bool Scavenger::get_Elite()
@@ -133,7 +151,7 @@ namespace Scavolution
                         self.AddSubModule(scarf);
                         spritenum += scarf.totalSprites;
                     }
-                    
+
                 });
 
             }
@@ -269,7 +287,7 @@ namespace Scavolution
 
         public void StaticWorld_InitCustomTemplates(On.StaticWorld.orig_InitCustomTemplates orig)
         {
-            
+
             orig();
 
             Logger.LogDebug("Initializing Scavenger Junior");
@@ -392,7 +410,7 @@ namespace Scavolution
                     {
                         Logger.LogError(except);
                     }
-                    
+
                     return len;
                 };
                 /*
@@ -420,7 +438,7 @@ namespace Scavolution
                     cursor.Emit(OpCodes.Ldarg_0);
                     cursor.EmitDelegate(transform_length);
                 }
-                
+
             }
             catch (Exception except)
             {
@@ -480,7 +498,7 @@ namespace Scavolution
                 Logger.LogError(except);
             }
         }
-        
+
         public void FixScavengerJuniorMass(Scavenger scav)
         {
             if (scav.isJunior())
@@ -511,6 +529,16 @@ namespace Scavolution
             {
                 Logger.LogError(except);
             }
+        }
+
+        public string ScavengerJunior_CreatureSymbol_SpriteNameOfCreature(On.CreatureSymbol.orig_SpriteNameOfCreature orig, IconSymbol.IconSymbolData iconData)
+        {
+            if (iconData.critType == SECreatureEnums.ScavengerJunior)
+            {
+                return "atlases/Kill_ScavengerJunior";
+            }
+
+            return orig(iconData);
         }
     }
     

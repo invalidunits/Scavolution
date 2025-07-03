@@ -8,10 +8,24 @@ namespace Scavolution
         {
             ScavengerJunior = new CreatureTemplate.Type("Scavolution_ScavengerJunior", true);
         }
+    }
+    
+    static class SEMultiplayerUnlocks
+    {
+        public static MultiplayerUnlocks.SandboxUnlockID? ScavengerJunior { get; private set; }
 
+        static public void RegisterEnums()
+        {
+            ScavengerJunior = new MultiplayerUnlocks.SandboxUnlockID("Scavolution_ScavengerJunior", true);
+            if (!MultiplayerUnlocks.CreatureUnlockList.Contains(ScavengerJunior))
+			{
+				MultiplayerUnlocks.CreatureUnlockList.Insert(MultiplayerUnlocks.CreatureUnlockList.IndexOf(MultiplayerUnlocks.SandboxUnlockID.Scavenger), ScavengerJunior);
+			}
+        }
     }
 
-    static class SESocialEvent 
+
+    static class SESocialEvent
     {
         public static SocialEventRecognizer.EventID? JuniorNuisance { get; private set; }
 
