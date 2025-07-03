@@ -146,7 +146,16 @@ namespace Scavolution
 
         void ScavJuniorGearUp(ScavengerAbstractAI self)
         {
-            for (int i = 0; i < 2; i++)
+            int restockOBJs = 2;
+            foreach (AbstractPhysicalObject.AbstractObjectStick stick in self.parent.stuckObjects)
+            {
+                if ((stick is AbstractPhysicalObject.CreatureGripStick) && (stick.A == self.parent))
+                {
+                    restockOBJs -= 1;
+                }
+            }
+
+            for (int i = 0; i < restockOBJs; i++)
             {
                 if (UnityEngine.Random.value < 0.4) continue;
 
