@@ -13,10 +13,46 @@ namespace Scavolution
         {
             totalSprites = 2;
             segments = new SimpleSegment[size, size];
+
+            UnityEngine.Random.State previousstate = UnityEngine.Random.state;
+            try
+            {
+                UnityEngine.Random.InitState(owner.owner.abstractPhysicalObject.ID.RandomSeed);
+                var personality = owner.scavenger.abstractCreature.personality;
+                length = 60f + UnityEngine.Random.Range(-5f, 5f) + 10f*personality.dominance;
+                width = 7f + UnityEngine.Random.Range(-1f, 1f) + 3f*personality.bravery;
+                if (UnityEngine.Random.value < 0.4f)
+                {
+                    color = new HSLColor(UnityEngine.Random.Range(0.083f, 0.917f), 1.0f, 0.5f + 0.2f*personality.dominance).rgb; // exotic
+                }
+                else
+                {
+                    color = new HSLColor(UnityEngine.Random.Range(0.025f, 0.25f), 1.0f, 0.5f + 0.2f*personality.dominance).rgb; // yellow-orange
+                }
+
+                color.r += (owner.scavenger.abstractCreature.personality.aggression + owner.scavenger.abstractCreature.personality.bravery) * 0.2f;
+                color.r = Mathf.Min(color.r, 1.0f);
+                
+            }
+            catch (Exception except)
+            {
+                ScavolutionPlugin.pubLogger?.LogError(except);
+            }
+            finally
+            {
+                UnityEngine.Random.state = previousstate;
+            }
+
+
+
+
+
         }
 
-        float length = 60f;
-        float width = 7f;
+        float length;
+        float width;
+        Color color = Color.yellow;
+        
         const int size = 6;
         private SimpleSegment[,] segments;
 
@@ -140,8 +176,8 @@ namespace Scavolution
             }
 
 
-            neck.color = new Color(255, 165, 0);
-            dangle.color = new Color(255, 165, 0);
+            neck.color = color;
+            dangle.color = color;
             
             
         }

@@ -15,7 +15,7 @@ namespace Scavolution
             On.RainWorld.OnModsInit += RainWorld_OnModsInit;
         }
 
-
+        public ScavolutionOptionsMenu options = new();
         void RainWorld_OnModsInit(On.RainWorld.orig_OnModsInit orig, RainWorld self)
         {
             plugin = this;
@@ -23,32 +23,33 @@ namespace Scavolution
             
             try
             {
+                On.Menu.MainMenu.ctor += MainMenu_ctor;
 
-                Logger.LogDebug("Initializing Scavolution");
+                MachineConnector.SetRegisteredOI("invalidunits.scavolution", options);
                 EvolutionTree.InitializeEvolutions();
                 Logger.LogDebug("Finished Evolution Init");
-
-                ScavengerAIHooks();
-                SaveHooks();
-                Logger.LogDebug("Finished Hooking AI And Save.");
 
                 SECreatureEnums.RegisterEnums();
                 SESocialEvent.RegisterEnums();
                 SEScavengerBehaviors.RegisterEnums();
                 SEMultiplayerUnlocks.RegisterEnums();
-
                 Logger.LogDebug("Finished registering Enums.");
+
+
+                ScavengerAIHooks();
+                Logger.LogDebug("Finished Hooking AI.");
 
                 RegisterScavengerJunior();
                 Logger.LogDebug("Finished registering scav junior");
 
-                On.Menu.MainMenu.ctor += MainMenu_ctor;
+                SaveHooks();
+                Logger.LogDebug("Finished Hooking Saving.");    
 
             }
             catch (Exception except)
             {
                 failedInitialization = true;
-                Logger.LogError(except);
+                UnityEngine.Debug.Log(except);
             }
 
             
@@ -62,13 +63,16 @@ namespace Scavolution
             if (!(ModManager.DLCShared || ModManager.Watcher) && !showedNoDLCWarning)
             {
                 showedNoDLCWarning = true;
-                manager.ShowDialog(new Menu.DialogNotify("Scavolution: No DLC has been enabled. Scavengers won't evolve.", manager, () => { }));
+                manager.ShowDialog(new Menu.DialogNotify(
+                    "Scavolution: No DLC has been enabled. Scavengers won't evolve.",
+                    manager, () => { }));
             }
-
-            if (failedInitialization && !showedFailedInitialization)
+            else if (failedInitialization && !showedFailedInitialization)
             {
                 showedFailedInitialization = true;
-                manager.ShowDialog(new Menu.DialogNotify("Scavolution: \n Scavolution has failed to start up. Please restart your game. \n If this message continues to show disable the mod before continuing.", manager, () => { }));
+                manager.ShowDialog(new Menu.DialogNotify(
+                    "Scavolution: \n Scavolution has failed to start up. Please restart your game. \n If this message continues to show, please disable the mod before playing.",
+                    manager, () => { }));
             }
 
             orig(self, manager, showRegionSpecificBkg);

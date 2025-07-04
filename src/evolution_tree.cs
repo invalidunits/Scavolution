@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 namespace Scavolution 
 {
@@ -43,12 +44,39 @@ namespace Scavolution
             return false;
         }
 
+
+        static public bool GetRandomEvolution(this CreatureTemplate.Type type, out EvolutionRecipe? evolution)
+        {
+            evolution = null;
+            if (recipes != null)
+            {
+                List<EvolutionRecipe> valid_recipes = new();
+
+                for (int i = 0; i < recipes.Count(); i++)
+                {
+                    ref EvolutionRecipe recipe = ref recipes[i];
+                    if (recipe.starts_as.index == type.index) continue;
+                    if (recipe.ends_as.index != type.index) continue;
+                    valid_recipes.Add(recipe);
+                    return true;
+                }
+
+                UnityEngine.Random.State state = UnityEngine.Random.state;
+                UnityEngine.Random.InitState((int)System.DateTime.Now.Ticks);
+
+
+                evolution = valid_recipes[(int)Mathf.Floor((float)valid_recipes.Count * UnityEngine.Random.value)];
+                UnityEngine.Random.state = state;
+                return true;
+            }
+            return false;
+        }
+
         static public bool TryGetEvolution(this AbstractCreature creature, AbstractPhysicalObject.AbstractObjectType item, out EvolutionRecipe? evolution) => TryGetEvolution(creature.creatureTemplate.type, item, out evolution);
 
 
         static public void InitializeEvolutions()
         {
-            UnityEngine.Debug.Log($"Initializing recipes");
             List<EvolutionRecipe> list_recipes = new List<EvolutionRecipe>();
 
             if (ModManager.DLCShared)
@@ -56,7 +84,7 @@ namespace Scavolution
                 list_recipes.Add(new EvolutionRecipe(CreatureTemplate.Type.Scavenger,
                     DLCSharedEnums.CreatureTemplateType.ScavengerElite, AbstractPhysicalObject.AbstractObjectType.VultureMask, 1));
                 list_recipes.Add(new EvolutionRecipe(CreatureTemplate.Type.Scavenger,
-                    DLCSharedEnums.CreatureTemplateType.ScavengerElite, DLCSharedEnums.AbstractObjectType.SingularityBomb, 2));
+                    DLCSharedEnums.CreatureTemplateType.ScavengerElite, DLCSharedEnums.AbstractObjectType.SingularityBomb, 1));
             }
 
             if (ModManager.Watcher)
@@ -64,7 +92,7 @@ namespace Scavolution
                 list_recipes.Add(new EvolutionRecipe(CreatureTemplate.Type.Scavenger,
                     Watcher.WatcherEnums.CreatureTemplateType.ScavengerTemplar, Watcher.WatcherEnums.AbstractObjectType.Boomerang, 1));
                 list_recipes.Add(new EvolutionRecipe(CreatureTemplate.Type.Scavenger,
-                    Watcher.WatcherEnums.CreatureTemplateType.ScavengerTemplar, AbstractPhysicalObject.AbstractObjectType.KarmaFlower, 2));
+                    Watcher.WatcherEnums.CreatureTemplateType.ScavengerTemplar, AbstractPhysicalObject.AbstractObjectType.KarmaFlower, 1));
                 list_recipes.Add(new EvolutionRecipe(Watcher.WatcherEnums.CreatureTemplateType.ScavengerTemplar,
                     Watcher.WatcherEnums.CreatureTemplateType.ScavengerDisciple, AbstractPhysicalObject.AbstractObjectType.KarmaFlower, 1));
 
@@ -72,7 +100,7 @@ namespace Scavolution
                 if (ModManager.DLCShared)
                 {
                     list_recipes.Add(new EvolutionRecipe(DLCSharedEnums.CreatureTemplateType.ScavengerElite,
-                        Watcher.WatcherEnums.CreatureTemplateType.ScavengerDisciple, AbstractPhysicalObject.AbstractObjectType.KarmaFlower, 2));
+                        Watcher.WatcherEnums.CreatureTemplateType.ScavengerDisciple, AbstractPhysicalObject.AbstractObjectType.KarmaFlower, 1));
                     list_recipes.Add(new EvolutionRecipe(DLCSharedEnums.CreatureTemplateType.ScavengerElite,
                         Watcher.WatcherEnums.CreatureTemplateType.ScavengerDisciple, Watcher.WatcherEnums.AbstractObjectType.Boomerang, 1));
                 }

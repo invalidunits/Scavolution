@@ -68,6 +68,38 @@ namespace Scavolution
                     ChangeOverlap(true);
                 }
 
+                if (ModManager.DLCShared)
+                {
+                    if (scavenger != null)
+                    {
+                        if (scavenger.animation?.id == DLCSharedEnums.ScavengerAnimationID.Jumping)
+                        {
+                            ChangeOverlap(true);
+                        }
+                        else if (!ScavolutionPlugin.ScavengerJunior_EvaluateGoodParent((ScavengerAbstractAI)scavenger.abstractCreature.abstractAI, owner.abstractCreature))
+                        {
+                            if (scavenger.animation?.id != DLCSharedEnums.ScavengerAnimationID.PrepareToJump)
+                            {
+                                ScavolutionPlugin.pubLogger?.LogDebug("Attempting to jump off back");
+                                Scavenger.JumpFinder jumpFinder = new Scavenger.JumpFinder(scavenger.room, scavenger, scavenger.abstractCreature.pos.Tile);
+                                bool direction = false;
+                                if (owner is Player p2) {
+                                    direction = p2.flipDirection > 0f;
+                                }
+                                
+                                jumpFinder.bestJump = new Scavenger.JumpFinder.JumpInstruction(scavenger.mainBodyChunk.pos, new Vector2(direction ? (-11.5f) : 11.5f, 13.5f), 0.5f + UnityEngine.Random.Range(-0.1f, 0.1f));
+                                PathFinder.PathingCell goalCell = scavenger.AI.pathFinder.PathingCellAtWorldCoordinate(scavenger.abstractCreature.pos + new IntVector2(direction? -10 : 10, 0));
+                                jumpFinder.bestJump.goalCell = goalCell;
+                                scavenger.jumpFinders.Clear();
+                                scavenger.jumpFinders.Add(jumpFinder);
+                                scavenger.InitiateJump(jumpFinder, 30);
+                            }
+                        }
+                    }
+                }
+
+                
+                
             }
             else
             {
@@ -92,7 +124,16 @@ namespace Scavolution
 
             ChangeOverlap(newOverlap: false);
 
-
+            if (ModManager.DLCShared)
+            {
+                if (scavenger.animation?.id == DLCSharedEnums.ScavengerAnimationID.Jumping)
+                {
+                    ChangeOverlap(true);
+                    return;
+                }
+            }
+            
+            
             if (owner is Player p)
             {
                 var restpos = (owner.graphicsModule is PlayerGraphics playerGraphics) ? playerGraphics.head.pos : owner.mainBodyChunk.pos;
@@ -105,26 +146,18 @@ namespace Scavolution
                 scavenger.bodyChunks[1].RelativeMoveFromOutsideMyUpdate(eu, offset);
                 scavenger.bodyChunks[2].RelativeMoveFromOutsideMyUpdate(eu, offset);
 
-                scavenger.bodyChunks[0].vel = owner.mainBodyChunk.vel; // torsoe
-                scavenger.bodyChunks[1].vel = Vector2.Lerp(scavenger.bodyChunks[1].vel, owner.mainBodyChunk.vel, 0.5f); // legs
-                                                                                                                        // no vel sync for head
+                if (scavenger.animation?.id != DLCSharedEnums.ScavengerAnimationID.PrepareToJump)
+                {
+                    scavenger.bodyChunks[0].vel = owner.mainBodyChunk.vel; // torsoe
+                    scavenger.bodyChunks[1].vel = Vector2.Lerp(scavenger.bodyChunks[1].vel, owner.mainBodyChunk.vel, 0.5f); // legs
+                }
 
-
-                // if (ModManager.DLCShared)
-                // {
-                //     if (scavenger.animation != null)
-                //     {
-                //         if (scavenger.animation.id != DLCSharedEnums.ScavengerAnimationID.Jumping)
-                //             scavenger.animation = new Scavenger.JumpingAnimation(scavenger);
-                //     }
-                // }
-
-                scavenger.movMode = Scavenger.MovementMode.StandStill;
+                // no vel sync for head
             }
 
             if (owner is Scavenger scav_holder)
             {
-                Vector2 headpos = scav_holder.bodyChunks[2].pos;
+                Vector2 headpos = scav_holder.mainBodyChunk.pos;
                 headpos += new Vector2(-scav_holder.flip * 5f, 23f);
 
                 scavenger.flip = Mathf.Lerp(scavenger.flip, scav_holder.flip, 0.8f);
@@ -134,19 +167,16 @@ namespace Scavolution
                 scavenger.bodyChunks[1].RelativeMoveFromOutsideMyUpdate(eu, offset);
                 scavenger.bodyChunks[2].RelativeMoveFromOutsideMyUpdate(eu, offset);
 
-                scavenger.bodyChunks[0].vel = scav_holder.bodyChunks[2].vel; // torsoe
-                scavenger.bodyChunks[1].vel = Vector2.Lerp(scavenger.bodyChunks[1].vel, scav_holder.bodyChunks[2].vel, 0.5f); // legs
+                if (!ModManager.DLCShared || (scavenger.animation?.id != DLCSharedEnums.ScavengerAnimationID.PrepareToJump))
+                {
+                    scavenger.bodyChunks[0].vel = scav_holder.bodyChunks[2].vel; // torsoe
+                    scavenger.bodyChunks[1].vel = Vector2.Lerp(scavenger.bodyChunks[1].vel, scav_holder.bodyChunks[2].vel, 0.5f); // legsPrepareToJump
+                }
+            }
 
 
-                // if (ModManager.DLCShared)
-                // {
-                //     if (scavenger.animation != null)
-                //     {
-                //         if (scavenger.animation.id != DLCSharedEnums.ScavengerAnimationID.Jumping)
-                //             scavenger.animation = new Scavenger.JumpingAnimation(scavenger);
-                //     }
-                // }
-
+            if (!ModManager.DLCShared || ((scavenger.animation?.id != DLCSharedEnums.ScavengerAnimationID.PrepareToJump) && (scavenger.animation?.id != DLCSharedEnums.ScavengerAnimationID.Jumping)))
+            {
                 scavenger.movMode = Scavenger.MovementMode.StandStill;
                 scavenger.moveModeChangeCounter = 0;
             }
@@ -214,6 +244,7 @@ namespace Scavolution
             if (scavenger is null) return;
             scavenger.CollideWithObjects = newOverlap;
             scavenger.canBeHitByWeapons = newOverlap;
+            scavenger.GoThroughFloors = !newOverlap;
             if (scavenger.graphicsModule != null && owner.room != null)
             {
                 for (int i = 0; i < owner.room.game.cameras.Length; i++)
@@ -573,6 +604,11 @@ namespace Scavolution
 
         bool ScangerJunior_WantToBeHeld(ScavengerAI scav, ScavengerAI grabber)
         {
+            if (scav.scavenger.animation?.id == DLCSharedEnums.ScavengerAnimationID.Jumping)
+            {
+                ParentalParams.getOrAdd(scav).wantCarryTimer = 0;
+                return false;
+            } 
             if ((scav.creature.abstractAI as ScavengerAbstractAI)!.GoHome()) return false;
             if (scav.creature.controlled) return false;
             if (!ScavengerParentTracker.map.TryGetValue(scav, out var parentTracker)) return false;
