@@ -9,6 +9,7 @@ namespace Scavolution
     public partial class ScavolutionPlugin : BaseUnityPlugin
     {
         public static ManualLogSource? pubLogger => plugin?.Logger;
+        public static bool Init = false;
         public static ScavolutionPlugin? plugin;
         private void Awake()
         {
@@ -23,27 +24,31 @@ namespace Scavolution
             
             try
             {
-                On.Menu.MainMenu.ctor += MainMenu_ctor;
+                if (!Init)
+                {
+                    Init = true;
+                    On.Menu.MainMenu.ctor += MainMenu_ctor;
 
-                MachineConnector.SetRegisteredOI("invalidunits.scavolution", options);
-                EvolutionTree.InitializeEvolutions();
-                Logger.LogDebug("Finished Evolution Init");
+                    MachineConnector.SetRegisteredOI("invalidunits.scavolution", options);
+                    EvolutionTree.InitializeEvolutions();
+                    Logger.LogDebug("Finished Evolution Init");
 
-                SECreatureEnums.RegisterEnums();
-                SESocialEvent.RegisterEnums();
-                SEScavengerBehaviors.RegisterEnums();
-                SEMultiplayerUnlocks.RegisterEnums();
-                Logger.LogDebug("Finished registering Enums.");
+                    SECreatureEnums.RegisterEnums();
+                    SESocialEvent.RegisterEnums();
+                    SEScavengerBehaviors.RegisterEnums();
+                    SEMultiplayerUnlocks.RegisterEnums();
+                    Logger.LogDebug("Finished registering Enums.");
 
 
-                ScavengerAIHooks();
-                Logger.LogDebug("Finished Hooking AI.");
+                    ScavengerAIHooks();
+                    Logger.LogDebug("Finished Hooking AI.");
 
-                RegisterScavengerJunior();
-                Logger.LogDebug("Finished registering scav junior");
+                    RegisterScavengerJunior();
+                    Logger.LogDebug("Finished registering scav junior");
 
-                SaveHooks();
-                Logger.LogDebug("Finished Hooking Saving.");    
+                    SaveHooks();
+                    Logger.LogDebug("Finished Hooking Saving.");    
+                }
 
             }
             catch (Exception except)
