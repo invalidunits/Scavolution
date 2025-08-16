@@ -54,7 +54,7 @@ namespace Scavolution
             catch (Exception except)
             {
                 failedInitialization = true;
-                UnityEngine.Debug.Log(except);
+                Logger.LogError(except);
             }
 
             
@@ -65,23 +65,22 @@ namespace Scavolution
         bool showedNoDLCWarning = false;
         void MainMenu_ctor(On.Menu.MainMenu.orig_ctor orig, Menu.MainMenu self, ProcessManager manager, bool showRegionSpecificBkg)
         {
-            if (!(ModManager.DLCShared || ModManager.Watcher) && !showedNoDLCWarning)
-            {
-                showedNoDLCWarning = true;
-                manager.ShowDialog(new Menu.DialogNotify(
-                    "Scavolution: No DLC has been enabled. Scavengers won't evolve.",
-                    manager, () => { }));
-            }
-            else if (failedInitialization && !showedFailedInitialization)
+            if (failedInitialization && !showedFailedInitialization)
             {
                 showedFailedInitialization = true;
                 manager.ShowDialog(new Menu.DialogNotify(
                     "Scavolution: \n Scavolution has failed to start up. Please restart your game. \n If this message continues to show, please disable the mod before playing.",
                     manager, () => { }));
             }
+            else if (!(ModManager.DLCShared || ModManager.Watcher) && !showedNoDLCWarning)
+            {
+                showedNoDLCWarning = true;
+                manager.ShowDialog(new Menu.DialogNotify(
+                    "Scavolution: No DLC has been enabled. Scavengers won't evolve.",
+                    manager, () => { }));
+            }
 
             orig(self, manager, showRegionSpecificBkg);
-            
         }
 
 

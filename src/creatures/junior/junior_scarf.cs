@@ -75,7 +75,7 @@ namespace Scavolution
                     segment.vel.y -= 0.4f * scavGrphs.scavenger.room.gravity;
                     if (i > 0)
                     {
-                        this.ConnectSegments(ref segment, ref segments[i - 1, j], segmentlength, 0.7f);
+                        this.ConnectSegments(ref segment, ref segments[i - 1, j], segmentlength, 0.5f);
                     }
                     if (j > 0)
                     {
