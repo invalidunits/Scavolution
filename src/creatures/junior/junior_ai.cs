@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using IL;
@@ -783,7 +784,11 @@ namespace Scavolution
         public static void ScavPlayerRelationChange(ScavengerAI self, float change, AbstractCreature player)
         {
             int playernum = -1;
-            if (NotSlugcatPlayables && isNotSlugcatsPlayer(player, out playernum))
+            if (player.state is PlayerState pstate)
+            {
+                playernum = pstate.playerNumber;
+            }
+            else if (NotSlugcatPlayables && isNotSlugcatsPlayer(player, out playernum))
             {
                 player = NotSlugcatPlayables_getPlayerController(player);
             }
@@ -811,7 +816,7 @@ namespace Scavolution
                 Logger.LogError($"{parent} lost custody of {junior.parent} because they didn't want to be adopted.");
                 return false;
             }
-
+            ScavolutionPlugin.pubLogger?.LogDebug(new StackTrace());
             bool allowed_to_adopt = parent.creatureTemplate.TopAncestor().type == CreatureTemplate.Type.Scavenger;
             allowed_to_adopt = allowed_to_adopt || isPlayer(parent, out _);
 

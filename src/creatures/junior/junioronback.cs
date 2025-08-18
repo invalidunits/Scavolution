@@ -18,8 +18,8 @@ namespace Scavolution
     {
         static public ConditionalWeakTable<Creature, JuniorOnBack> creature_map = new();
         static public ConditionalWeakTable<Scavenger, JuniorOnBack> onback_map = new();
-        public Creature owner;
-        public Scavenger? scavenger;
+        public readonly Creature owner;
+        public Scavenger? scavenger { get; private set; }
         public bool increment;
         public int counter;
         public bool interactionLocked;
@@ -241,13 +241,14 @@ namespace Scavolution
             scavenger = scav;
             onback_map.Add(scav, this);
             ChangeOverlap(false);
-            interactionLocked = true;
             stick = new AbstractJuniorOnBackStick(owner.abstractCreature, scavenger.abstractCreature);
         }
 
         public void ChangeOverlap(bool newOverlap)
         {
             if (scavenger is null) return;
+
+            ScavolutionPlugin.pubLogger?.LogDebug(new StackTrace());
             scavenger.CollideWithObjects = newOverlap;
             scavenger.canBeHitByWeapons = newOverlap;
             scavenger.GoThroughFloors = !newOverlap;
