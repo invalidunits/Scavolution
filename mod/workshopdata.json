@@ -7,10 +7,10 @@
   "Requirements": "",
   "RequirementNames": "",
   "Authors": "invalidunits",
-  "Visibility": "Unlisted",
+  "Visibility": "Public",
   "Tags": [
-    "Game Mechanics",
-    "Creatures"
+    "Creatures",
+    "Game Mechanics"
   ],
   "WorkshopID": 3488413283,
   "UploadFilesOnly": false,
