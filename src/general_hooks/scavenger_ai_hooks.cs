@@ -31,7 +31,7 @@ namespace Scavolution
 
             if (self.followCreature is not null)
             {
-                if (self.followCreature.creatureTemplate.TopAncestor().type == CreatureTemplate.Type.Slugcat) return false;
+                if (isPlayer(self.followCreature, out _)) return false;
             }
 
             if (self.followCreature?.abstractAI is ScavengerAbstractAI scavAI)
@@ -203,9 +203,11 @@ namespace Scavolution
         
         private void ScavengerAI_RecognizeCreatureAcceptingGift(On.ScavengerAI.orig_RecognizeCreatureAcceptingGift orig, ScavengerAI self, Tracker.CreatureRepresentation subRep, Tracker.CreatureRepresentation objRep, bool objIsMe, PhysicalObject item)
         {
+            orig(self, subRep, objRep, objIsMe, item);
+
             try
             {
-                if (subRep.representedCreature.creatureTemplate.type != CreatureTemplate.Type.Slugcat)
+                if (!isPlayer(subRep.representedCreature, out _))
                 {
                     return;
                 }
@@ -223,8 +225,6 @@ namespace Scavolution
             {
                 Logger.LogError(except);
             }
-
-            orig(self, subRep, objRep, objIsMe, item);
         }
 
     }

@@ -7,6 +7,7 @@ using MonoMod.Cil;
 using MoreSlugcats;
 using On;
 using RWCustom;
+using SprobDesecratingGraves;
 using UnityEngine;
 
 namespace Scavolution
@@ -28,6 +29,7 @@ namespace Scavolution
 
             On.PreyTracker.TrackedPrey.Attractiveness += ScavengerJunior_TrackedPrey_Attractiveness;
             On.ThreatTracker.Utility += ScavengerAI_ThreatTracker_Utility;
+            On.ScavengerAI.IdleScore += ScavengerJunior_ScavengerAI_IdleScore;
 
             // punishment for being a nuisence
             On.PhysicalObject.Grabbed += ScavengerJunior_PhysicalObject_Grabbed;
@@ -221,6 +223,31 @@ namespace Scavolution
                 Logger.LogError(except);
             }
         }
+
+        class AbstractBehaviorParams
+        {
+            static ConditionalWeakTable<ScavengerAbstractAI, AbstractBehaviorParams> map = new();
+            public ScavengerAbstractAI owner;
+
+            public bool toldToStay = false;
+            AbstractBehaviorParams(ScavengerAbstractAI owner)
+            {
+                this.owner = owner;
+                map.Add(owner, this);
+            }
+
+            static public AbstractBehaviorParams getOrAdd(ScavengerAbstractAI ai)
+            {
+                AbstractBehaviorParams ret;
+                if (!map.TryGetValue(ai, out ret))
+                {
+                    ret = new AbstractBehaviorParams(ai);
+                }
+                return ret;
+            }
+        }
+
+        
         public void ScavengerJunior_ScavengerAbstractAI_AbstractBehavior(On.ScavengerAbstractAI.orig_AbstractBehavior orig, ScavengerAbstractAI self, int time)
         {
             orig(self, time);
@@ -270,12 +297,22 @@ namespace Scavolution
                             }
                         }
                     }
+
+                    AbstractBehaviorParams behaviorParams = AbstractBehaviorParams.getOrAdd(self);
+                    if (self.parent.PacifiedBecauseCarried || ControlledScavenger(self.parent)) behaviorParams.toldToStay = false;
+                    if (self.followCreature is null || !isPlayer(self.followCreature, out _)) behaviorParams.toldToStay = false;
+                    if (behaviorParams.toldToStay)
+                    {
+                        self.freeze = 40;
+                    }
                 }
             }
             catch (Exception except)
             {
                 Logger.LogError(except);
             }
+
+            orig(self, time);
         }
 
         public void ScavengerJunior_ScavengerAI_CreatureSpotted(On.ScavengerAI.orig_CreatureSpotted orig, ScavengerAI self, bool firstSpot, Tracker.CreatureRepresentation rep)
@@ -309,17 +346,15 @@ namespace Scavolution
                 if (self is Scavenger scav && scav.isJunior() && scav.room is not null)
                 {
                     if (JuniorOnBack.onback_map.TryGetValue(scav, out var onback)) onback.ChangeOverlap(true);
-                    if (grasp.grabber is Player p && !JuniorNuisanceImmunity)
+                    if (isPlayer(grasp.grabber.abstractCreature, out _) && !JuniorNuisanceImmunity)
                     {
-
-
-                        if (scav.AI.threatTracker.Utility() > 0.1 && scav.AI.threatTracker.mostThreateningCreature.representedCreature != p.abstractCreature &&
+                        if (scav.AI.threatTracker.Utility() > 0.1 && scav.AI.threatTracker.mostThreateningCreature.representedCreature != grasp.grabber.abstractCreature &&
                             Custom.DistLess(scav.room.MiddleOfTile(scav.AI.threatTracker.mostThreateningCreature.BestGuessForPosition()), scav.mainBodyChunk.pos, 400f))
                         {
                             if (ParentalParams.getOrAdd(scav.AI).dangerSaviorCounter <= 0)
                             {
-                                Logger.LogDebug($"{p.abstractCreature} saved {scav.abstractCreature} from {scav.AI.threatTracker.mostThreateningCreature.representedCreature}");
-                                scav.AI.ScavPlayerRelationChange(scav.AI.threatTracker.Utility() * 0.25f, p.abstractCreature); // Thank you!
+                                Logger.LogDebug($"{grasp.grabber.abstractCreature} saved {scav.abstractCreature} from {scav.AI.threatTracker.mostThreateningCreature.representedCreature}");
+                                ScavPlayerRelationChange(scav.AI, scav.AI.threatTracker.Utility() * 0.25f, grasp.grabber.abstractCreature); // Thank you!
                             }
                             ParentalParams.getOrAdd(scav.AI).dangerSaviorCounter = Mathf.Max(400, ParentalParams.getOrAdd(scav.AI).dangerSaviorCounter);
                         }
@@ -327,8 +362,8 @@ namespace Scavolution
                         {
                             if (ParentalParams.getOrAdd(scav.AI).juniorNuisanceCooldown <= 0)
                             {
-                                Logger.LogDebug($"{p.abstractCreature} is being a Nuisance to {scav.abstractCreature}");
-                                self.room.socialEventRecognizer.SocialEvent(SESocialEvent.JuniorNuisance, p, scav, null);
+                                Logger.LogDebug($"{grasp.grabber.abstractCreature} is being a Nuisance to {scav.abstractCreature}");
+                                self.room.socialEventRecognizer.SocialEvent(SESocialEvent.JuniorNuisance, grasp.grabber.abstractCreature.realizedCreature, scav, null);
                                 ParentalParams.getOrAdd(scav.AI).juniorNuisanceCooldown = 160;
                             }
                         }
@@ -395,11 +430,82 @@ namespace Scavolution
             }
         }
 
+        public float ScavengerJunior_ScavengerAI_IdleScore(On.ScavengerAI.orig_IdleScore orig, ScavengerAI self, WorldCoordinate tstPs)
+        {
+            float value = orig(self, tstPs);
+            try
+            {
+                if (self.creature.abstractAI.followCreature is not null && self.scavenger.isJunior())
+                {
+                    var distance = Custom.BetweenRoomsDistance(self.creature.world, tstPs, self.creature.abstractAI.followCreature.pos);	
+			        value -= Custom.LerpMap(distance, ScavengerParentTracker.desiredCloseness, ScavengerParentTracker.desiredCloseness*3f, 0f, 1000f);
+                }
+            }
+            catch (Exception except)
+            {
+                Logger.LogError(except);
+            }
+            return value;
+        }
+
         public void ScavengerJunior_ScavengerAI_DecideBehavior(ILContext context)
         {
             try
             {
                 ILCursor cursor = new(context);
+                cursor.Emit(OpCodes.Ldarg_0);
+                cursor.EmitDelegate((ScavengerAI self) =>
+                {
+                    if (self.creature.abstractAI.followCreature?.realizedCreature is Player p)
+                    {
+                        if (p.input[0].jmp && !p.input[1].jmp && p.bodyMode != Player.BodyModeIndex.Default)
+                        {
+                            if (p.input[0].y == -1 && p.input[0].x == 0)
+                            {
+                                AbstractBehaviorParams.getOrAdd((ScavengerAbstractAI)self.creature.abstractAI).toldToStay = true;
+                            }
+                        }
+                    }
+
+                     if (self.creature.abstractAI.followCreature?.realizedCreature is Scavenger scav && scav.inputWithDiagonals.HasValue && scav.lastInputWithDiagonals.HasValue)
+                    {
+                        if (scav.inputWithDiagonals.Value.jmp && !scav.lastInputWithDiagonals.Value.jmp)
+                        {
+                            if (scav.inputWithDiagonals.Value.y == -1 && scav.inputWithDiagonals.Value.x == 0)
+                            {
+                                AbstractBehaviorParams.getOrAdd((ScavengerAbstractAI)self.creature.abstractAI).toldToStay = true;
+                            }
+                        }
+                    }
+
+                    var parentalParams = ParentalParams.getOrAdd(self);
+                    if (self.creature.creatureTemplate.type == SECreatureEnums.ScavengerJunior)
+                    {
+                        if (self.creature.abstractAI.followCreature is AbstractCreature parent)
+                        {
+                            if (parent.realizedCreature is Scavenger scavdad && ScangerJunior_WantToBeHeld(self, scavdad.AI))
+                            {
+                                parentalParams.wantCarryTimer = 200;
+
+                                var held_juniors = scavdad.grasps.Where(x => x is not null && x.grabbed is Scavenger scav && scav.isJunior());
+                                if (held_juniors.Count() < 1 && !parent.GetAllConnectedObjects().Contains(self.creature) && scavdad.AI.giftForMe == null)
+                                {
+                                    // Make scav dad into pick me up
+                                    scavdad.AI.scavengeCandidate = scavdad.AI.itemTracker.RepresentationForObject(self.scavenger, AddIfMissing: true);
+                                    parent.abstractAI.SetDestination(self.scavenger.room.GetWorldCoordinate(self.scavenger.firstChunk.pos));
+                                }
+                            }
+                            else
+                            {
+                                parentalParams.wantCarryTimer -= 1;
+                            }
+                        }
+                    }
+
+                    parentalParams.juniorNuisanceCooldown -= 1;
+                    parentalParams.parentalBloodlust -= 1;
+                    parentalParams.dangerSaviorCounter -= 1;
+                });
 
                 /*
                     36	007E	ldarg.0
@@ -435,33 +541,6 @@ namespace Scavolution
                             self.utilityComparer.GetUtilityTracker(self.threatTracker).weight = 0f;
                         }
                     }
-
-                    if (self.creature.creatureTemplate.type == SECreatureEnums.ScavengerJunior)
-                    {
-                        if (self.creature.abstractAI.followCreature is AbstractCreature parent)
-                        {
-                            if (parent.realizedCreature is Scavenger scavdad && ScangerJunior_WantToBeHeld(self, scavdad.AI))
-                            {
-                                parentalParams.wantCarryTimer = 200;
-
-                                var held_juniors = scavdad.grasps.Where(x => x is not null && x.grabbed is Scavenger scav && scav.isJunior());
-                                if (held_juniors.Count() < 1 && !parent.GetAllConnectedObjects().Contains(self.creature) && scavdad.AI.giftForMe == null)
-                                {
-                                    // Make scav dad into pick me up
-                                    scavdad.AI.scavengeCandidate = scavdad.AI.itemTracker.RepresentationForObject(self.scavenger, AddIfMissing: true);
-                                    parent.abstractAI.SetDestination(self.scavenger.room.GetWorldCoordinate(self.scavenger.firstChunk.pos));
-                                }
-                            }
-                            else
-                            {
-                                parentalParams.wantCarryTimer -= 1;
-                            }
-                        }
-                    }
-
-                    parentalParams.juniorNuisanceCooldown -= 1;
-                    parentalParams.parentalBloodlust -= 1;
-                    parentalParams.dangerSaviorCounter -= 1;
                 });
 
 
@@ -500,10 +579,23 @@ namespace Scavolution
                     if (module is ScavengerParentTracker parentTracker)
                     {
                         self.behavior = SEScavengerBehaviors.FollowParent;
+                        self.runSpeedGoal = parentTracker.RunSpeed();
+                        if (parentTracker.RunSpeed() < 0.1f)
+                        {
+                            self.behavior = ScavengerAI.Behavior.Idle;
+                            self.idleCounter = 40;
+                            self.testIdlePos = self.creature.pos;
+                            self.creature.abstractAI.SetDestination(self.creature.pos);
+                        }
+
                         if (parentTracker.abstractParent is not null && !parentTracker.abstractParent.slatedForDeletion)
                         {
                             self.focusCreature = self.tracker.RepresentationForCreature(parentTracker.abstractParent, true);
                         }
+                    }
+                    else
+                    {
+                        AbstractBehaviorParams.getOrAdd((ScavengerAbstractAI)self.creature.abstractAI).toldToStay = false;
                     }
                 });
 
@@ -598,7 +690,7 @@ namespace Scavolution
                     {
                         // lock in
                         self.agitation = Mathf.Max(self.agitation, (holdingkid == CreatureHoldingJunior.HoldingMYKid) ? 1.0f : 0.5f);
-                        self.scared = Mathf.Min(self.agitation, (holdingkid == CreatureHoldingJunior.HoldingMYKid) ? 1.0f : 0.25f);
+                        self.scared = Mathf.Min(self.agitation, (holdingkid == CreatureHoldingJunior.HoldingMYKid) ? 0f : 0.25f);
                         self.bloodLust = 25;
 
                         self.focusCreature = self.tracker.RepresentationForCreature(critter.abstractCreature, true);
@@ -614,6 +706,13 @@ namespace Scavolution
                         {
                             ParentalParams.getOrAdd(self).parentalBloodlust += 300;
                         }
+                    }
+
+                    if (critter.abstractCreature == self.creature.abstractAI.followCreature)
+                    {
+                        if (relationship.type != CreatureTemplate.Relationship.Type.Pack) relationship.intensity = 0.5f;
+                        relationship.type = CreatureTemplate.Relationship.Type.Pack;
+                        relationship.intensity = Mathf.Max(relationship.intensity, 0.5f);
                     }
                 }
             }
@@ -676,11 +775,32 @@ namespace Scavolution
             return false;
         }
 
+        public static AbstractCreature NotSlugcatPlayables_getPlayerController(AbstractCreature player)
+        {
+            return player.GetScavengerData().controller.abstractCreature ?? player;
+        }
 
+        public static void ScavPlayerRelationChange(ScavengerAI self, float change, AbstractCreature player)
+        {
+            int playernum = -1;
+            if (NotSlugcatPlayables && isNotSlugcatsPlayer(player, out playernum))
+            {
+                player = NotSlugcatPlayables_getPlayerController(player);
+            }
+
+            SocialMemory.Relationship orInitiateRelationship = self.creature.state.socialMemory.GetOrInitiateRelationship(player.ID);
+            orInitiateRelationship.InfluenceTempLike(change * 1.5f);
+            orInitiateRelationship.InfluenceLike(change * 0.5f);
+            orInitiateRelationship.InfluenceKnow(Mathf.Abs(change));
+            self.creature.world.game.session.creatureCommunities.InfluenceLikeOfPlayer(
+                self.creature.creatureTemplate.communityID,
+                self.creature.world.RegionNumber, playernum, change * 0.1f, 0.75f, 0.25f);
+        }
+        
         public bool ScavengerJunior_WantToHaveParent(ScavengerAbstractAI junior)
         {
             if (junior.parent.creatureTemplate.type != SECreatureEnums.ScavengerJunior) return false;
-            if (junior.parent.controlled) return false;
+            if (ControlledScavenger(junior.parent)) return false;
             return true;
         }
 
@@ -693,7 +813,7 @@ namespace Scavolution
             }
 
             bool allowed_to_adopt = parent.creatureTemplate.TopAncestor().type == CreatureTemplate.Type.Scavenger;
-            allowed_to_adopt = allowed_to_adopt || parent.creatureTemplate.type == CreatureTemplate.Type.Slugcat;
+            allowed_to_adopt = allowed_to_adopt || isPlayer(parent, out _);
 
             if (parent.creatureTemplate.type == SECreatureEnums.ScavengerJunior)
             {
@@ -730,6 +850,10 @@ namespace Scavolution
             junior.followCreature = parent;
             if (junior.parent.state is JuniorState state)
             {
+                if (junior.RealAI is ScavengerAI scavai && state.currentParent != parent.ID.number && isPlayer(parent, out _))
+                {
+                    ScavPlayerRelationChange(scavai, 0.25f, parent);
+                }
                 state.currentParent = parent.ID.number;
                 state.cyclesSinceSeenParent = 0;
             }
@@ -743,6 +867,11 @@ namespace Scavolution
             if (junior.followCreature is not null)
             {
                 ScavolutionPlugin.pubLogger?.LogDebug($"{junior.followCreature} lost custody of {junior.parent} ");
+                if (junior.RealAI is ScavengerAI scavai && isPlayer(junior.followCreature, out _))
+                {
+                    ScavPlayerRelationChange(scavai, -0.25f, junior.followCreature);
+                }
+
             }
             junior.followCreature = null;
             if (junior.parent.state is JuniorState state)
@@ -750,6 +879,8 @@ namespace Scavolution
                 state.currentParent = null;
                 state.cyclesSinceSeenParent = 0;
             }
+
+            AbstractBehaviorParams.getOrAdd(junior).toldToStay = false;
         }
 
 
@@ -760,9 +891,63 @@ namespace Scavolution
             return appreciation > 0.4;
         }
 
+        public static bool isPlayer(AbstractCreature creature, out int playerNumber)
+        {
+            playerNumber = -1;
+            if (creature.creatureTemplate.type == CreatureTemplate.Type.Slugcat && creature.state is PlayerState pstate)
+            {
+                playerNumber = pstate.playerNumber;
+                return true;
+            }
+
+            if (NotSlugcatPlayables)
+            {
+                if (isNotSlugcatsPlayer(creature, out playerNumber)) return true;
+            }
+
+            return false;
+        }
+
+        public static bool isNotSlugcatsPlayer(AbstractCreature creature, out int playerNumber)
+        {
+            playerNumber = -1;
+            if (creature.creatureTemplate.type == SprobDesecratingGraves.Enums.CreatureTemplateType.PlayerScavenger)
+            {
+                var controller = SprobDesecratingGraves.ScavengerHooks.GetScavengerData(creature).controller;
+                if (controller is not null)
+                {
+                    playerNumber = controller.playerState.playerNumber;
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         public static float ScavengerJunior_AppreciateParent(ScavengerAbstractAI junior, AbstractCreature parent)
         {
+            if (isPlayer(parent, out int playerNum))
+            {
+                var actualParent = parent;
+                if (NotSlugcatPlayables)
+                {
+                    actualParent = NotSlugcatPlayables_getPlayerController(parent);
+                }
+
+                float relationship = junior.parent.state.socialMemory.GetOrInitiateRelationship(actualParent.ID).like;
+                float reputation = junior.parent.world.game.session.creatureCommunities.LikeOfPlayer(
+                    CreatureCommunities.CommunityID.Scavengers, junior.parent.world.RegionNumber, playerNum
+                );
+
+                if (reputation > 0.9 && relationship >= 0f)
+                {
+                    relationship = Math.Max(0.5f, relationship);
+                }
+
+                return relationship - Mathf.Min(relationship, 0.4f);
+            }
+
+
             if (parent.creatureTemplate.type == SECreatureEnums.ScavengerJunior)
             {
                 return 0.0f;
@@ -802,12 +987,6 @@ namespace Scavolution
                 return 0.5f;
             }
 
-            if (parent.creatureTemplate.type == CreatureTemplate.Type.Slugcat)
-            {
-                float relationship = junior.parent.state.socialMemory.GetOrInitiateRelationship(parent.ID).like;
-                return relationship - Mathf.Min(relationship, 0.4f);
-            }
-
             return 0.0f;
         }
 
@@ -819,19 +998,34 @@ namespace Scavolution
                 map.Add(intel, this);
             }
 
-            const float desiredCloseness = 10f;
+            public const float desiredCloseness = 6f;
             public float Urgency
             {
                 get
                 {
                     if (abstractParent is null || abstractParent.state.dead || abstractParent.slatedForDeletion) return 0.0f;
-                    return ScavengerJunior_AppreciateParent((ScavengerAbstractAI)this.AI.creature.abstractAI, abstractParent);
+                    return 0.8f;
                 }
+            }
+
+            public float DynamicDesiredCloseness()
+            {
+                if (abstractParent is null || abstractParent.Room is null || abstractParent.state.dead || abstractParent.slatedForDeletion) return desiredCloseness;
+                if (abstractParent.Room.gate || abstractParent.Room.shelter)
+                {
+                    return 3f;
+                }
+                return desiredCloseness;
             }
 
             public override float Utility()
             {
-                if (abstractParent is null || abstractParent.state.dead || abstractParent.slatedForDeletion) return 0f;
+                if (AbstractBehaviorParams.getOrAdd((ScavengerAbstractAI)AI.creature.abstractAI).toldToStay)
+                {
+                    return 0.5f;
+                }
+
+                if (abstractParent is null || abstractParent.Room is null || abstractParent.state.dead || abstractParent.slatedForDeletion) return 0f;
                 if (abstractParent.pos.room != AI.creature.pos.room)
                 {
                     return Urgency;
@@ -842,11 +1036,23 @@ namespace Scavolution
                     return 1f;
                 }
 
-                return Custom.LerpMap(abstractParent.pos.Tile.FloatDist(AI.creature.pos.Tile), desiredCloseness, desiredCloseness * 3f, 0.2f, 1f) * Urgency;
+                var dist = abstractParent.pos.Tile.FloatDist(AI.creature.pos.Tile);
+                if (dist < DynamicDesiredCloseness())
+                {
+                    return 0f;
+                }
+                    
+                return Custom.LerpMap(dist, DynamicDesiredCloseness(), DynamicDesiredCloseness() * 3f, 0.2f, 1f) * Urgency; ;
             }
 
             public float RunSpeed()
             {
+                if (AbstractBehaviorParams.getOrAdd((ScavengerAbstractAI)AI.creature.abstractAI).toldToStay)
+                {
+                    return 0f;
+                }
+
+
                 if (abstractParent is null || abstractParent.state.dead || abstractParent.slatedForDeletion) return 0f;
                 WorldCoordinate friendDest = abstractParent.pos;
 
@@ -899,7 +1105,7 @@ namespace Scavolution
                     lastParentPos = abstractParent.pos;
                 }
 
-                if (abstractParent.pos.room != lastParentPos.Value.room || abstractParent.pos.Tile.FloatDist(lastParentPos.Value.Tile) > desiredCloseness)
+                if (abstractParent.pos.room != lastParentPos.Value.room || abstractParent.pos.Tile.FloatDist(lastParentPos.Value.Tile) > DynamicDesiredCloseness())
                 {
                     parentMovingCounter = 100;
                     lastParentPos = abstractParent.pos;

@@ -36,6 +36,7 @@ namespace Scavolution
 
             // registered stuff
             On.StaticWorld.InitCustomTemplates += StaticWorld_InitCustomTemplates;
+            On.StaticWorld.InitStaticWorldRelationships += ScavengerJunior_StaticWorld_InitStaticWorldRelationships;
             On.CreatureTemplate.ctor_Type_CreatureTemplate_List1_List1_Relationship += CreatureTemplate_ctor;
             On.AbstractCreature.ctor += AbstractCreature_ctor;
 
@@ -47,8 +48,14 @@ namespace Scavolution
             On.ScavengerAbstractAI.InitGearUp += AbstractScavengerAI_InitGearUP;
             On.ScavengerAbstractAI.ReGearInDen += AbstractScavengerAI_ReGearInDen;
 
-            // Weight
+            // Jumping
             IL.Scavenger.Update += Scavenger_UpdateScavengerJumpJunior;
+
+            // Nerf Jumping
+            IL.Scavenger.Jump += ScavengerJunior_Scavenger_Jump;
+            IL.Scavenger.JumpFinder.NewTest += ScavengerJunior_Scavenger_JumpFinder_NewTest;
+
+            // Weight
             IL.Scavenger.Update += Scanvenger_UpdateJuniorMass;
 
             // graphical stuff
@@ -68,6 +75,79 @@ namespace Scavolution
             }
             On.CreatureSymbol.SpriteNameOfCreature += ScavengerJunior_CreatureSymbol_SpriteNameOfCreature;
             On.MultiplayerUnlocks.SandboxItemUnlocked += ScavengerJunior_MultiplayerUnlocks_SandboxItemUnlocked;
+        }
+
+        void ScavengerJunior_StaticWorld_InitStaticWorldRelationships(On.StaticWorld.orig_InitStaticWorldRelationships orig)
+        {
+            orig();
+            try
+            {
+                StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerJunior, CreatureTemplate.Type.Overseer, new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Uncomfortable, 0.5f));
+            }
+            catch (Exception except)
+            {
+                Logger.LogError(except);
+            }
+        }
+
+        void ScavengerJunior_Scavenger_Jump(ILContext context)
+        {
+            /*
+            134	0182	ldarg.0
+            135	0183	ldc.i4.s	20
+            136	0185	stfld	int32 Scavenger::addDelay
+            */
+            try
+            {
+                ILCursor cursor = new(context);
+                cursor.GotoNext(MoveType.Before,
+                    x => x.MatchStfld<Scavenger>(nameof(Scavenger.addDelay))
+                );
+                cursor.Emit(OpCodes.Ldarg_0);
+                cursor.EmitDelegate((int addDelay, Scavenger self) =>
+                {
+                    if (self.isJunior())
+                    {
+                        self.jumpFinders.Clear();
+                        return Math.Max(addDelay, 60);
+                    }
+                    
+                    return addDelay;
+                });
+
+            }
+            catch (Exception except)
+            {
+                Logger.LogError(except);
+            }
+        }
+
+        void ScavengerJunior_Scavenger_JumpFinder_NewTest(ILContext context)
+        {
+            /*
+            21	0042	ldc.r4	14
+            22	0047	ldc.r4	50
+            23	004C	ldloc.0
+            24	004D	call	float32 [UnityEngine.CoreModule]UnityEngine.Mathf::Lerp(float32, float32, float32)
+            25	0052	stloc.1
+            */
+            try
+            {
+                ILCursor cursor = new(context);
+                cursor.GotoNext(MoveType.Before,
+                    x => x.MatchStloc(1)
+                );
+                cursor.Emit(OpCodes.Ldarg_0);
+                cursor.EmitDelegate((float jumpforce, Scavenger self) =>
+                {
+                    return jumpforce*0.4f;
+                });
+
+            }
+            catch (Exception except)
+            {
+                Logger.LogError(except);
+            }
         }
 
         bool ScavengerJunior_MultiplayerUnlocks_SandboxItemUnlocked(On.MultiplayerUnlocks.orig_SandboxItemUnlocked orig, MultiplayerUnlocks self, MultiplayerUnlocks.SandboxUnlockID unlockID)

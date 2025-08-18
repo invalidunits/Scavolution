@@ -39,7 +39,7 @@ namespace Scavolution
         {
             if (this.increment)
             {
-                var backpacktime = this.owner is Player ? 20 : 100;
+                var backpacktime = this.owner is Player ? 20 : 60;
 
                 this.counter++;
                 if (this.counter > backpacktime)
@@ -267,8 +267,6 @@ namespace Scavolution
                 scavenger = null;
             }
             
-            ScavolutionPlugin.pubLogger.LogDebug(newOverlap);
-            ScavolutionPlugin.pubLogger.LogDebug(new StackTrace().ToString());
         }
 
         public void Throw(bool eu)
@@ -360,20 +358,152 @@ namespace Scavolution
             On.Scavenger.RecreateSticksFromAbstract += JuniorOnBack_Scavenger_RecreateSticksFromAbstract;
             On.Scavenger.Update += ScavengerJunior_Scavenger_UpdateOnBack;
             IL.Scavenger.GraphicsModuleUpdated += ScavengerJunior_Scavenger_GraphicsModuleUpdated;
-            On.Creature.Grab += ScavengerJunior_Creature_Grab; 
+            On.Creature.Grab += ScavengerJunior_Creature_Grab;
 
             new Hook(typeof(ScavengerGraphics.ScavengerHand).GetMethod(nameof(ScavengerGraphics.ScavengerHand.CheckForGrabPos),
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public
-                ), ScavengerJunior_ScavengerGraphics_ScavengerHand_CheckForGrabPos); 
+                ), ScavengerJunior_ScavengerGraphics_ScavengerHand_CheckForGrabPos);
             new Hook(typeof(ScavengerAI).GetProperty(nameof(ScavengerAI.HoldWeapon)).GetGetMethod(), ScavengerJunior_ScavengerAI_HoldWeapon);
             On.ScavengerGraphics.ScavengerHand.Update += ScavengerJunior_ScavengerGraphics_ScavengerHand_Update;
+
+
+            // safari
+            IL.Scavenger.LookForItemsToPickUp += ScavengerJunior_Scavenger_LookForItemsToPickUp;
 
 
             // dont hit juniors on my back or being grabbed by enemy
             On.Weapon.HitThisObject += ScavengerJunior_Weapon_HitThisObject;
             IL.Scavenger.MidRangeUpdate += ScavengerJunior_Scavenger_MidRangeUpdate;
 
+            if (NotSlugcatPlayables)
+            {
+                NotSlugcatPlayables_JuniorOnBackHooks();
+            }
+
         }
+
+        void NotSlugcatPlayables_JuniorOnBackHooks()
+        {
+            new ILHook(typeof(SprobDesecratingGraves.ScavengerHooks).GetMethod(nameof(SprobDesecratingGraves.ScavengerHooks.GraphicsModuleUpdated),
+                    System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public
+                ), NotSlugcatPlayables_Scavenger_GraphicsModuleUpdate); 
+            new ILHook(typeof(SprobDesecratingGraves.ScavengerHooks).GetMethod(nameof(SprobDesecratingGraves.ScavengerHooks.ControlledAct),
+                    System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public
+                ), NotSlugcatPlayables_Scavenger_ControlledAct); 
+        }
+        void NotSlugcatPlayables_Scavenger_ControlledAct(ILContext context)
+        {
+
+            try
+            {
+
+                // 1493	10CF	stloc.s	V_59 (59)
+                // 1494	10D1	ldloc.s	V_59 (59)
+                // 1495	10D3	brfalse	1968 (158D) nop 
+                ILCursor cursor = new(context);
+                ILLabel breakifblock = null!;
+                cursor.GotoNext(MoveType.After,
+                    x => x.MatchStloc(59),
+                    x => x.MatchLdloc(59),
+                    x => x.MatchBrfalse(out breakifblock)
+                );
+
+                cursor.Emit(OpCodes.Ldarg_1);
+                cursor.EmitDelegate((Scavenger self) =>
+                {
+                    bool ret = false;
+                    var onback = self.GetJuniorOnBack();
+                    if ((self.grasps.Any(x => x?.grabbed is Scavenger) && onback.scavenger == null) || (onback.scavenger != null && self.grasps.Any(x => x is null)))
+                    {
+                        self.GetJuniorOnBack().increment = true;
+                        ret = true;
+                    }
+
+                    onback.Update();
+                    return ret;
+                });
+                cursor.Emit(OpCodes.Brtrue, breakifblock);
+
+            }
+            catch (Exception except)
+            {
+                Logger.LogDebug(except);
+            }
+        }
+
+        void NotSlugcatPlayables_Scavenger_GraphicsModuleUpdate(ILContext context)
+        {
+            try
+            {
+
+                // 7	0010	ldloc.0
+                // 8	0011	brfalse	364 (03F8) ldarg.0 
+
+                ILCursor cursor = new(context);
+                cursor.GotoNext(MoveType.After,
+                    x => x.MatchLdloc(0),
+                    x => x.MatchBrfalse(out _)
+                );
+
+                cursor.Emit(OpCodes.Ldarg_1);
+                cursor.Emit(OpCodes.Ldarg_2);
+                cursor.Emit(OpCodes.Ldarg_3);
+                cursor.EmitDelegate((Scavenger self, bool actuallyViewed, bool eu) =>
+                {
+                    var onback = self.GetJuniorOnBack();
+                    onback.GraphicsModuleUpdated(actuallyViewed, eu);
+                });
+
+                // 234	0298	br	348 (03DC) nop 
+                // 235	029D	nop
+                // 236	029E	ldarg.1
+                // 237	029F	callvirt	instance class ['Assembly-CSharp']GraphicsModule ['Assembly-CSharp']PhysicalObject::get_graphicsModule()
+                // 238	02A4	ldnull
+                // 239	02A5	ceq
+                ILLabel leaveelseblock = null!;
+                cursor.GotoNext(MoveType.Before,
+                    x => x.MatchLdarg(1),
+                    x => x.MatchCallvirt(typeof(PhysicalObject).GetProperty(nameof(PhysicalObject.graphicsModule)).GetGetMethod()),
+                    x => x.MatchLdnull(),
+                    x => x.MatchCeq()
+                );
+                cursor.GotoPrev(x => x.MatchBr(out leaveelseblock));
+                cursor.GotoNext(MoveType.After,
+                    x => x.MatchCall(typeof(SprobDesecratingGraves.ScavengerHooks).GetMethod(
+                        nameof(SprobDesecratingGraves.ScavengerHooks.ItemPosition),
+                        System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public)),
+                    x => x.MatchCall(out _), // conversion float2 to Vector2
+                    x => x.MatchStloc(14));
+
+
+                Logger.LogDebug(context.Method.Parameters[1].ParameterType);
+                Logger.LogDebug(context.Body.Variables[3].VariableType);
+                Logger.LogDebug(context.Body.Variables[14].VariableType);
+                Logger.LogDebug(context.Method.Parameters[3].ParameterType);
+                cursor.Emit(OpCodes.Ldarg_1);
+                cursor.Emit(OpCodes.Ldloc, 3);
+                cursor.Emit(OpCodes.Ldloc, 14);
+                cursor.Emit(OpCodes.Ldarg_3);
+                cursor.EmitDelegate((Scavenger self, PhysicalObject grabbed_obj, Vector2 itemPos, bool eu) =>
+                {
+                    if (grabbed_obj is Scavenger scav)
+                    {
+                        HandholdWithJunior(self, scav, itemPos, eu);
+                        return true;
+                    }
+                    
+                    return false;
+                });
+
+                cursor.Emit(OpCodes.Brtrue, leaveelseblock);
+            }
+            catch (Exception except)
+            {
+                Logger.LogDebug(except);
+            }
+        }
+
+
         void ScavengerJunior_Scavenger_MidRangeUpdate(ILContext context)
         {
             try
@@ -411,7 +541,7 @@ namespace Scavolution
                                 return false;
                             }
                             
-                            if (self.grasps.Where(x => x is not null && x.grabbed == creature).FirstOrDefault() is not null)
+                            if (self.grasps.Any(x => x?.grabbed == otherscav))
                             {
                                 return false;
                             }
@@ -432,14 +562,70 @@ namespace Scavolution
                 
                 cursor.Emit(OpCodes.Brfalse, skip);
             }
-
-
             catch (Exception except)
             {
                 Logger.LogDebug(except);
             }
             
         }
+
+        void ScavengerJunior_Scavenger_LookForItemsToPickUp(ILContext context)
+        {
+            try
+            {
+                ILCursor cursor = new(context);
+                cursor.GotoNext(MoveType.After,
+                    x => x.MatchLdloc(5),
+                    x => x.MatchIsinst<AbstractCreature>()
+                );
+
+                cursor.Emit(OpCodes.Ldarg, 0);
+                cursor.Emit(OpCodes.Ldloc, 5);
+                cursor.EmitDelegate((object instcheck, Scavenger self, AbstractPhysicalObject obj) =>
+                {
+                    if (obj is AbstractCreature critter && critter.creatureTemplate.type == SECreatureEnums.ScavengerJunior && !self.isJunior())
+                    {
+                        return obj;
+                    }
+
+                    return instcheck;
+                });
+            }
+            catch (Exception except)
+            {
+                Logger.LogError(except);
+            }
+
+        }
+
+
+
+        // void ScavengerJunior_ScavengerAI_ControlledBehavior(On.ScavengerAI.orig_ControlledBehavior orig, ScavengerAI self)
+        // {
+        //     try
+        //     {
+        //         var onback = self.scavenger.GetJuniorOnBack();
+        //         if (self.scavenger.inputWithDiagonals.HasValue)
+        //         {
+        //             if (self.scavenger.inputWithDiagonals.Value.pckp && ((self.scavenger.grasps.Any(x => x is null) && onback.scavenger != null) || (onback.scavenger == null && self.scavenger.grasps[0]?.grabbed is Scavenger)))
+        //             {
+        //                 onback.increment = true;
+        //             }
+        //             else
+        //             {
+        //                 onback.increment = false;
+        //             }
+        //         }
+
+        //         onback.Update();
+        //     }
+        //     catch (Exception except)
+        //     {
+        //         Logger.LogError(except);
+        //     }
+
+        //     orig(self);
+        // }
 
 
         bool ScavengerJunior_Weapon_HitThisObject(On.Weapon.orig_HitThisObject orig, Weapon self, global::PhysicalObject obj) {
@@ -459,7 +645,7 @@ namespace Scavolution
                             return false;
                         }
 
-                        if (scavthrower.grasps.Where(x => x is not null && x.grabbed == scav).FirstOrDefault() is not null)
+                        if (scavthrower.grasps.Any(x => x?.grabbed == scav))
                         {
                             return false;
                         }
@@ -490,34 +676,44 @@ namespace Scavolution
         {
             try
             {
-                var onback = self.GetJuniorOnBack();
-                foreach (Creature.Grasp grasp in self.grasps.Where(x => x is not null))
+                if (!ControlledScavenger(self.abstractCreature))
                 {
-                    if (grasp.grabbed is Scavenger scav)
+                    var onback = self.GetJuniorOnBack();
+                    foreach (Creature.Grasp grasp in self.grasps.Where(x => x is not null))
                     {
-                        if (ParentalParams.getOrAdd(scav.AI).wantCarryTimer > 0)
+                        if (grasp.grabbed is Scavenger scav)
                         {
-                            if (onback.scavenger == null)
+                            if (ParentalParams.getOrAdd(scav.AI).wantCarryTimer <= 0 || scav.AI.giftForMe != null)
                             {
-                                onback.increment = true;
+                                grasp.Release();
+                            }
+                            else if (ParentalParams.getOrAdd(scav.AI).wantCarryTimer > 100)
+                            {
+                                if (onback.scavenger == null)
+                                {
+                                    onback.increment = true;
+                                }
                             }
                         }
-                        else
+
+
+                    }
+
+                    if (onback.scavenger is not null)
+                    {
+                        if (ParentalParams.getOrAdd(onback.scavenger.AI).wantCarryTimer <= 100)
                         {
-                            grasp.Release();   
+                            onback.increment = true;
+                        }
+
+                        if (onback.scavenger.AI.giftForMe != null)
+                        {
+                            onback.Throw(eu);
                         }
                     }
-                }
 
-                if (onback.scavenger is not null)
-                {
-                    if (ParentalParams.getOrAdd(onback.scavenger.AI).wantCarryTimer <= 0)
-                    {
-                        onback.increment = true;
-                    }
-                }
-
-                onback.Update();                
+                    onback.Update();
+                }              
             }
             catch (Exception except)
             {
@@ -657,36 +853,10 @@ namespace Scavolution
                 {
                     if (grabbed_obj is Scavenger scav)
                     {
-                        Vector2 difference = scav.mainBodyChunk.pos - itemPos;
-
-                        if (difference.sqrMagnitude > grab_raidus * grab_raidus)
-                        {
-                            Vector2 difference_normal = difference.normalized;
-                            Vector2 targetpos = itemPos + difference_normal * grab_raidus;
-                            scav.mainBodyChunk.MoveFromOutsideMyUpdate(eu, targetpos);
-
-                            var leaving_magnitude = Vector2.Dot(scav.mainBodyChunk.vel, difference_normal);
-                            var weightdiff = scav.TotalMass / self.TotalMass;
-                            if (leaving_magnitude > 0f)
-                            {
-                                var leaving_vel = difference_normal * leaving_magnitude;
-                                scav.mainBodyChunk.vel -= leaving_vel * 0.5f * Math.Max(weightdiff, 1.0f);
-                                self.mainBodyChunk.vel += leaving_vel * (1.0f / weightdiff) * 0.01f;
-                            }
-
-                            scav.abstractCreature.abstractAI.SetDestination(self.abstractCreature.abstractAI.destination);
-                            scav.AI.pathFinder.SetDestination(self.abstractCreature.abstractAI.destination);
-                            scav.AI.runSpeedGoal = self.AI.runSpeedGoal;
-
-                            if (scav.grasps[0] != null && self.Consious && !scav.grasps.All(x => x != null))
-                            {
-                                scav.ArrangeInventory();
-                            }
-                        }
-
+                        HandholdWithJunior(self, scav, itemPos, eu);
                         return true;
                     }
-
+                    
                     return false;
                 });
 
@@ -696,6 +866,31 @@ namespace Scavolution
             catch (Exception except)
             {
                 Logger.LogError(except);
+            }
+        }
+
+        void HandholdWithJunior(Scavenger self, Scavenger scav, Vector2 itemPos, bool eu)
+        {
+            Vector2 difference = scav.mainBodyChunk.pos - itemPos;
+
+            if (difference.sqrMagnitude > grab_raidus * grab_raidus)
+            {
+                Vector2 difference_normal = difference.normalized;
+                Vector2 targetpos = itemPos + difference_normal * grab_raidus;
+                scav.mainBodyChunk.MoveFromOutsideMyUpdate(eu, targetpos);
+
+                var leaving_magnitude = Vector2.Dot(scav.mainBodyChunk.vel, difference_normal);
+                var weightdiff = scav.TotalMass / self.TotalMass;
+                if (leaving_magnitude > 0f)
+                {
+                    var leaving_vel = difference_normal * leaving_magnitude;
+                    scav.mainBodyChunk.vel -= leaving_vel * 0.5f * Math.Max(weightdiff, 1.0f);
+                    self.mainBodyChunk.vel += leaving_vel * (1.0f / weightdiff) * 0.01f;
+                }
+
+                scav.abstractCreature.abstractAI.SetDestination(self.abstractCreature.abstractAI.destination);
+                scav.AI.pathFinder.SetDestination(self.abstractCreature.abstractAI.destination);
+                scav.AI.runSpeedGoal = self.AI.runSpeedGoal;
             }
         }
 
@@ -720,7 +915,6 @@ namespace Scavolution
 
         bool ScangerJunior_WantToBeHeld(ScavengerAI scav, ScavengerAI grabber)
         {
-            if (scav.scavenger.isJunior()) return false;
             if (ModManager.DLCShared)
             {
                 if (scav.scavenger.animation?.id == DLCSharedEnums.ScavengerAnimationID.Jumping)
@@ -729,8 +923,13 @@ namespace Scavolution
                     return false;
                 }
             }
+            if (scav.giftForMe != null)
+            {
+                ParentalParams.getOrAdd(scav).wantCarryTimer = 0;
+                return false;
+            }
             if ((scav.creature.abstractAI as ScavengerAbstractAI)!.GoHome()) return false;
-            if (scav.creature.controlled) return false;
+            if (ControlledScavenger(scav.creature)) return false;
             if (!ScavengerParentTracker.map.TryGetValue(scav, out var parentTracker)) return false;
             if (parentTracker.tiredness > 100) return true;
             if (scav.scared > 0.4) return true;
@@ -807,7 +1006,6 @@ namespace Scavolution
                 cursor.Emit(OpCodes.Ldarg_0);
                 cursor.EmitDelegate((Player self) =>
                 {
-                    Logger.LogDebug("update");
                     self.GetJuniorOnBack().Update();
                 });
 

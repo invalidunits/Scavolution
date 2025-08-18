@@ -5,6 +5,7 @@ using BepInEx.Logging;
 namespace Scavolution 
 {
 
+    // [BepInDependency("sprobgik.desecratinggraves", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInPlugin("invalidunits.scavolution", "Scavolution", "0.1")]
     public partial class ScavolutionPlugin : BaseUnityPlugin
     {
@@ -13,11 +14,11 @@ namespace Scavolution
         public static ScavolutionPlugin? plugin;
         private void Awake()
         {
-            On.RainWorld.OnModsInit += RainWorld_OnModsInit;
+            On.RainWorld.PostModsInit += RainWorld_PostModsInit;
         }
 
         public ScavolutionOptionsMenu options = new();
-        void RainWorld_OnModsInit(On.RainWorld.orig_OnModsInit orig, RainWorld self)
+        void RainWorld_PostModsInit(On.RainWorld.orig_PostModsInit orig, RainWorld self)
         {
             plugin = this;
             orig(self);
@@ -27,6 +28,7 @@ namespace Scavolution
                 if (!Init)
                 {
                     Init = true;
+                    InitializeModCompatibility();
                     On.Menu.MainMenu.ctor += MainMenu_ctor;
 
                     MachineConnector.SetRegisteredOI("invalidunits.scavolution", options);
