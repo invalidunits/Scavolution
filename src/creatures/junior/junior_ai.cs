@@ -778,7 +778,7 @@ namespace Scavolution
 
         public static AbstractCreature NotSlugcatPlayables_getPlayerController(AbstractCreature player)
         {
-            return player.GetScavengerData().controller.abstractCreature ?? player;
+            return player.GetScavengerData()?.controller?.abstractCreature ?? player;
         }
 
         public static void ScavPlayerRelationChange(ScavengerAI self, float change, AbstractCreature player)

@@ -233,22 +233,21 @@ namespace Scavolution
                 grasp.Release();
             }
 
-            if (scav.isJunior())
-            {
-                ScavolutionPlugin.plugin?.ScavengerJunior_GetAdopted((ScavengerAbstractAI)scav.abstractCreature.abstractAI, owner.abstractCreature);
-            }
-
             scavenger = scav;
             onback_map.Add(scav, this);
             ChangeOverlap(false);
             stick = new AbstractJuniorOnBackStick(owner.abstractCreature, scavenger.abstractCreature);
+
+            if (scav.isJunior())
+            {
+                ScavolutionPlugin.plugin?.ScavengerJunior_GetAdopted((ScavengerAbstractAI)scav.abstractCreature.abstractAI, owner.abstractCreature);
+            }
         }
 
         public void ChangeOverlap(bool newOverlap)
         {
             if (scavenger is null) return;
 
-            ScavolutionPlugin.pubLogger?.LogDebug(new StackTrace());
             scavenger.CollideWithObjects = newOverlap;
             scavenger.canBeHitByWeapons = newOverlap;
             scavenger.GoThroughFloors = !newOverlap;
