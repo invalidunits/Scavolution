@@ -406,7 +406,7 @@ namespace Scavolution
                         {
                             if (ID == SESocialEvent.JuniorNuisance)
                             {
-                                violence_score = 1.0f;
+                                violence_score = 2.0f;
                                 if (object_crit.abstractCreature?.abstractAI?.followCreature == self.creature)
                                 {
                                     violence_score *= 2f;
@@ -423,6 +423,31 @@ namespace Scavolution
                 });
                 cursor.Emit(OpCodes.Stloc, social_effect_loc);
 
+                // 71	00A4	ldarg.1
+                // 72	00A5	ldsfld	class SocialEventRecognizer/EventID SocialEventRecognizer/EventID::Theft
+                // 73	00AA	call	bool class ExtEnum`1<class SocialEventRecognizer/EventID>::op_Equality(class ExtEnum`1<!0>, class ExtEnum`1<!0>)
+                // 74	00AF	brfalse.s	84 (00C7) ldarg.1 
+                cursor.GotoNext(MoveType.After,
+                    x => x.MatchLdarg(1),
+                    x => x.MatchLdsfld<SocialEventRecognizer.EventID>(nameof(SocialEventRecognizer.EventID.Theft)),
+                    x => x.MatchCall(out _)
+                );
+
+                cursor.Emit(OpCodes.Ldarg_0);
+                cursor.Emit(OpCodes.Ldarg_2); // subject crit
+                cursor.Emit(OpCodes.Ldarg_3); // object crit
+                cursor.EmitDelegate((bool istheft, ScavengerAI self, Creature subject_crit, Creature object_crit) =>
+                {
+                    if (istheft)
+                    {
+                        // if i'm the parent, don't consider me taking an items stealing.
+                        if (object_crit == self.scavenger && self.scavenger.isJunior() && (self.creature.abstractAI.followCreature == subject_crit.abstractCreature))
+                        {
+                            istheft = false;
+                        }
+                    }
+                    return istheft;
+                });
 
             }
             catch (Exception except)
