@@ -25,14 +25,15 @@ namespace Scavolution
             
             try
             {
+                InitializeModCompatibility();
+                EvolutionTree.InitializeEvolutions();
+                
                 if (!Init)
                 {
                     Init = true;
-                    InitializeModCompatibility();
                     On.Menu.MainMenu.ctor += MainMenu_ctor;
 
                     MachineConnector.SetRegisteredOI("invalidunits.scavolution", options);
-                    EvolutionTree.InitializeEvolutions();
                     Logger.LogDebug("Finished Evolution Init");
 
                     SECreatureEnums.RegisterEnums();
@@ -49,7 +50,7 @@ namespace Scavolution
                     Logger.LogDebug("Finished registering scav junior");
 
                     SaveHooks();
-                    Logger.LogDebug("Finished Hooking Saving.");    
+                    Logger.LogDebug("Finished Hooking Saving.");
                 }
 
             }
