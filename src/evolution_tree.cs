@@ -58,15 +58,24 @@ namespace Scavolution
                     if (recipe.starts_as.index == type.index) continue;
                     if (recipe.ends_as.index != type.index) continue;
                     valid_recipes.Add(recipe);
-                    return true;
                 }
 
                 UnityEngine.Random.State state = UnityEngine.Random.state;
-                UnityEngine.Random.InitState((int)System.DateTime.Now.Ticks);
-
-
-                evolution = valid_recipes[(int)Mathf.Floor((float)valid_recipes.Count * UnityEngine.Random.value)];
+                UnityEngine.Random.InitState(UnityEngine.Time.frameCount);
+                float random = UnityEngine.Random.value;
                 UnityEngine.Random.state = state;
+
+                if (valid_recipes.Count > 0)
+                {
+                    int idx = Mathf.FloorToInt(random * valid_recipes.Count);
+                    if (idx > valid_recipes.Count) idx = valid_recipes.Count - 1;
+                    evolution = valid_recipes[idx];
+                }
+                else
+                {
+                    return false;
+                }
+                
                 return true;
             }
             return false;
