@@ -108,13 +108,19 @@ namespace Scavolution
 
             if (ScavolutionPlugin.M4rblelousEntityPack)
             {
-                list_recipes.Add(new EvolutionRecipe(DLCSharedEnums.CreatureTemplateType.ScavengerElite,
-                        LBMergedMods.Enums.CreatureTemplateType.ScavengerSentinel, AbstractPhysicalObject.AbstractObjectType.VultureMask, 1));
-                list_recipes.Add(new EvolutionRecipe(DLCSharedEnums.CreatureTemplateType.ScavengerElite,
-                        LBMergedMods.Enums.CreatureTemplateType.ScavengerSentinel, LBMergedMods.Enums.AbstractObjectType.ThornyStrawberry, 1));
+                AddM4rblelousEntityPackRecipes(ref list_recipes);
             }
-
+            
             recipes = list_recipes.ToArray();
+        }
+
+
+        static void AddM4rblelousEntityPackRecipes(ref List<EvolutionRecipe> list_recipes)
+        {
+            list_recipes.Add(new EvolutionRecipe(DLCSharedEnums.CreatureTemplateType.ScavengerElite,
+                        LBMergedMods.Enums.CreatureTemplateType.ScavengerSentinel, AbstractPhysicalObject.AbstractObjectType.VultureMask, 1));
+            list_recipes.Add(new EvolutionRecipe(DLCSharedEnums.CreatureTemplateType.ScavengerElite,
+                    LBMergedMods.Enums.CreatureTemplateType.ScavengerSentinel, LBMergedMods.Enums.AbstractObjectType.ThornyStrawberry, 1));
         }
     }
 }
