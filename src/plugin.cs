@@ -27,6 +27,18 @@ namespace Scavolution
             {
                 InitializeModCompatibility();
                 EvolutionTree.InitializeEvolutions();
+
+                SECreatureEnums.UnregisterEnums();
+                SECreatureEnums.RegisterEnums();
+
+                SEMultiplayerUnlocks.UnregisterEnums();
+                SEMultiplayerUnlocks.RegisterEnums();
+
+                SESocialEvent.UnregisterEnums();
+                SESocialEvent.RegisterEnums();
+
+                SEScavengerBehaviors.UnregisterEnums();
+                SEScavengerBehaviors.RegisterEnums();
                 
                 if (!Init)
                 {
@@ -36,17 +48,16 @@ namespace Scavolution
                     MachineConnector.SetRegisteredOI("invalidunits.scavolution", options);
                     Logger.LogDebug("Finished Evolution Init");
 
-                    SECreatureEnums.RegisterEnums();
-                    SESocialEvent.RegisterEnums();
-                    SEScavengerBehaviors.RegisterEnums();
-                    SEMultiplayerUnlocks.RegisterEnums();
+
+
+
                     Logger.LogDebug("Finished registering Enums.");
 
 
                     ScavengerAIHooks();
                     Logger.LogDebug("Finished Hooking AI.");
 
-                    RegisterScavengerJunior();
+                    RegisterCreatures();
                     Logger.LogDebug("Finished registering scav junior");
 
                     SaveHooks();

@@ -63,7 +63,8 @@ namespace Scavolution
                                     var junior = new AbstractCreature(loader.world, StaticWorld.GetCreatureTemplate(SECreatureEnums.ScavengerJunior), null, loader.spawners[spawnerindex].den, loader.game.GetNewID());
                                     AbstractRoom abstractRoom = loader.world.GetAbstractRoom(loader.spawners[spawnerindex].den);
                                     abstractRoom.MoveEntityToDen(junior);
-                                    JuniorState juniorstate = (JuniorState)junior.state;
+                                    
+                                    JuniorState juniorstate = JuniorState.map.GetValue(junior.state, (x) => throw new Exception("no junior state?"));
                                     juniorstate.currentParent = spawnedCreature.ID.number;
                                 }
                             }
@@ -152,7 +153,7 @@ namespace Scavolution
                             junior.spawnDen = worldCoordinate;
                             junior.pos = worldCoordinate;
                             ScavolutionPlugin.pubLogger?.LogDebug($"Spawning Scavenger Junior! {junior} with parent {critter}");
-                            JuniorState juniorState = (JuniorState)junior.state;
+                            JuniorState juniorState = JuniorState.map.GetValue(junior.state, (x) => throw new Exception("no junior state?"));
                             juniorState.currentParent = critter.ID.number;
                             self.savedPopulation.Add(self.CreatureToStringInDenPos(junior, validSaveShelter, activeGate));
                         }

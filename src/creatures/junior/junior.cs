@@ -20,6 +20,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
@@ -32,14 +33,13 @@ namespace Scavolution
     {
         void RegisterScavengerJunior()
         {
+            // state
+            On.HealthState.ctor += HealthState_ctor;
+            On.HealthState.ToString += HealthState_ToString;
+            On.HealthState.LoadFromString += HealthState_LoadFromString;
+            On.HealthState.CycleTick += HealthState_CycleTick;
+
             
-
-            // registered stuff
-            On.StaticWorld.InitCustomTemplates += StaticWorld_InitCustomTemplates;
-            On.StaticWorld.InitStaticWorldRelationships += ScavengerJunior_StaticWorld_InitStaticWorldRelationships;
-            On.CreatureTemplate.ctor_Type_CreatureTemplate_List1_List1_Relationship += CreatureTemplate_ctor;
-            On.AbstractCreature.ctor += AbstractCreature_ctor;
-
             // gameplay stuff
             JuniorAIHooks();
             JuniorOnBackHooks();
@@ -66,28 +66,6 @@ namespace Scavolution
             On.ScavengerGraphics.ctor += ScavengerGraphics_ctor;
             On.ScavengerGraphics.DrawSprites += ScavengerGraphics_DrawSprites;
             On.Scavenger.ctor += Scavenger_ctor;
-
-
-            // Arena stuff
-            if (!Futile.atlasManager.DoesContainAtlas("atlases/Kill_ScavengerJunior"))
-            {
-                Futile.atlasManager.LoadImage("atlases/Kill_ScavengerJunior");
-            }
-            On.CreatureSymbol.SpriteNameOfCreature += ScavengerJunior_CreatureSymbol_SpriteNameOfCreature;
-            On.MultiplayerUnlocks.SandboxItemUnlocked += ScavengerJunior_MultiplayerUnlocks_SandboxItemUnlocked;
-        }
-
-        void ScavengerJunior_StaticWorld_InitStaticWorldRelationships(On.StaticWorld.orig_InitStaticWorldRelationships orig)
-        {
-            orig();
-            try
-            {
-                StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerJunior, CreatureTemplate.Type.Overseer, new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Uncomfortable, 0.5f));
-            }
-            catch (Exception except)
-            {
-                Logger.LogError(except);
-            }
         }
 
         void ScavengerJunior_Scavenger_Jump(ILContext context)
@@ -156,16 +134,6 @@ namespace Scavolution
             {
                 Logger.LogError(except);
             }
-        }
-
-        bool ScavengerJunior_MultiplayerUnlocks_SandboxItemUnlocked(On.MultiplayerUnlocks.orig_SandboxItemUnlocked orig, MultiplayerUnlocks self, MultiplayerUnlocks.SandboxUnlockID unlockID)
-        {
-            if (unlockID == SEMultiplayerUnlocks.ScavengerJunior)
-            {
-                return self.SandboxItemUnlocked(MultiplayerUnlocks.SandboxUnlockID.Scavenger);
-            }
-
-            return orig(self, unlockID);
         }
 
         void Scavenger_UpdateScavengerJumpJunior(ILContext context)
@@ -305,27 +273,61 @@ namespace Scavolution
             orig(self);
         }
 
-        public class JuniorState : HealthState
+        void HealthState_ctor(On.HealthState.orig_ctor orig, HealthState self, AbstractCreature creature)
         {
-            public JuniorState(AbstractCreature creature) : base(creature)
+            orig(self, creature);
+
+            if (creature.creatureTemplate?.type == SECreatureEnums.ScavengerJunior)
             {
+                new JuniorState(self);
+            }
+        }
+
+        void HealthState_LoadFromString(On.HealthState.orig_LoadFromString orig, HealthState self, string[] s)
+        {
+            orig(self, s);
+            if (JuniorState.map.TryGetValue(self, out var juniorstate)) juniorstate.LoadFromString(s);
+        }
+
+        string HealthState_ToString(On.HealthState.orig_ToString orig, HealthState self)
+        {
+            string ret = orig(self);
+            if (JuniorState.map.TryGetValue(self, out var juniorstate)) juniorstate.Save(ref ret);
+            return ret;
+        }
+
+        void HealthState_CycleTick(On.HealthState.orig_CycleTick orig, HealthState self)
+        {
+            orig(self);
+            if (JuniorState.map.TryGetValue(self, out var juniorstate)) juniorstate.CycleTick();
+        }
+
+
+        public class JuniorState
+        {
+            CreatureState state;
+            public static ConditionalWeakTable<CreatureState, JuniorState> map = new();
+            public JuniorState(CreatureState state)
+            {
+                this.state = state;
                 currentParent = null;
+                map.Add(state, this);
             }
 
             public int cyclesSinceSeenParent = 0;
             public int? currentParent;
             const string currentParentSaveID = "ScavolutionJuniorParent";
-            public override string ToString()
+            const string cyclesSinceSeenParentSaveID = "ScavolutionJuniorCycleOrphan";
+            public void Save(ref string text)
             {
-                string text = base.ToString();
                 if (currentParent.HasValue)
                 {
-                    text += string.Format(CultureInfo.InvariantCulture, "<cB>{0}<cC>{1}", currentParentSaveID, currentParent.Value.ToString());
+                    text += string.Format(CultureInfo.InvariantCulture, $"<cB>{0}<cC>{1}", currentParentSaveID, currentParent.Value.ToString());
+                    text += string.Format(CultureInfo.InvariantCulture, $"<cB>{0}<cC>{1}", cyclesSinceSeenParentSaveID, cyclesSinceSeenParent.ToString());
                 }
-                return text;
             }
 
-            public override void LoadFromString(string[] s)
+            public void LoadFromString(string[] s)
             {
                 currentParent = null;
                 for (int i = 0; i < s.Length; i++)
@@ -334,118 +336,23 @@ namespace Scavolution
                     if (text != null && text == currentParentSaveID)
                     {
                         currentParent = int.Parse(Regex.Split(s[i], "<cC>")[1]);
+                        state.unrecognizedSaveStrings.Remove(currentParentSaveID);
+                    }
+                    
+                    if (text != null && text == cyclesSinceSeenParentSaveID)
+                    {
+                        cyclesSinceSeenParent = int.Parse(Regex.Split(s[i], "<cC>")[1]);
+                        state.unrecognizedSaveStrings.Remove(cyclesSinceSeenParentSaveID);
                     }
                 }
-
-                unrecognizedSaveStrings.Remove(currentParentSaveID);
-                base.LoadFromString(s);
             }
 
-            public override void CycleTick()
+            public void CycleTick()
             {
-                base.CycleTick();
                 if ((cyclesSinceSeenParent++) >= 2)
                 {
                     currentParent = null;
                 }
-            }
-        }
-
-
-        void AbstractCreature_ctor(On.AbstractCreature.orig_ctor orig, AbstractCreature self, World world, CreatureTemplate creatureTemplate, Creature realizedCreature, WorldCoordinate pos, EntityID ID)
-        {
-            orig(self, world, creatureTemplate, realizedCreature, pos, ID);
-            try
-            {
-                if (creatureTemplate.type == SECreatureEnums.ScavengerJunior)
-                {
-                    self.abstractAI = new ScavengerAbstractAI(self.world, self);
-                    self.state = new JuniorState(self);
-                }
-            }
-            catch (Exception except)
-            {
-                Logger.LogError(except);
-            }
-        }
-
-
-
-        CreatureTemplate? ScavengerJuniorTemplate = null;
-
-        public void StaticWorld_InitCustomTemplates(On.StaticWorld.orig_InitCustomTemplates orig)
-        {
-
-            orig();
-
-            Logger.LogDebug("Initializing Scavenger Junior");
-            List<TileTypeResistance> tile_resistance = new List<TileTypeResistance>();
-            List<TileConnectionResistance> tile_connection_resistance = new List<TileConnectionResistance>();
-            ScavengerJuniorTemplate = new CreatureTemplate(SECreatureEnums.ScavengerJunior,
-                StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.Scavenger),
-                tile_resistance,
-                tile_connection_resistance,
-                new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Uncomfortable, 0.4f)
-            );
-            ScavengerJuniorTemplate.BlizzardWanderer = false;
-            ScavengerJuniorTemplate.BlizzardAdapted = false;
-            ScavengerJuniorTemplate.baseDamageResistance = 1.5f;
-            ScavengerJuniorTemplate.baseStunResistance = 0.8f;
-            ScavengerJuniorTemplate.instantDeathDamageLimit = 1.0f;
-
-            ScavengerJuniorTemplate.offScreenSpeed = 1.25f;
-            ScavengerJuniorTemplate.grasps = 2;
-            ScavengerJuniorTemplate.AI = true;
-            ScavengerJuniorTemplate.requireAImap = true;
-            ScavengerJuniorTemplate.abstractedLaziness = 50;
-            ScavengerJuniorTemplate.bodySize = 0.8f;
-            ScavengerJuniorTemplate.doPreBakedPathing = false;
-            ScavengerJuniorTemplate.preBakedPathingAncestor = StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.StandardGroundCreature);
-            ScavengerJuniorTemplate.stowFoodInDen = false;
-            ScavengerJuniorTemplate.shortcutSegments = 1;
-
-            ScavengerJuniorTemplate.visualRadius = 1000f;
-            ScavengerJuniorTemplate.movementBasedVision = 0.3f;
-
-            ScavengerJuniorTemplate.waterRelationship = CreatureTemplate.WaterRelationship.AirAndSurface;
-            ScavengerJuniorTemplate.hibernateOffScreen = true;
-            ScavengerJuniorTemplate.roamBetweenRoomsChance = -1f;
-            ScavengerJuniorTemplate.roamInRoomChance = -1f;
-            ScavengerJuniorTemplate.socialMemory = true;
-            ScavengerJuniorTemplate.communityID = CreatureCommunities.CommunityID.Scavengers;
-            ScavengerJuniorTemplate.communityInfluence = 2f;
-            ScavengerJuniorTemplate.dangerousToPlayer = 0.1f;
-
-            ScavengerJuniorTemplate.meatPoints = 2;
-            ScavengerJuniorTemplate.usesNPCTransportation = true;
-            ScavengerJuniorTemplate.usesRegionTransportation = true;
-            ScavengerJuniorTemplate.usesCreatureHoles = false;
-            ScavengerJuniorTemplate.jumpAction = "Jump";
-            ScavengerJuniorTemplate.pickupAction = "Pick Up";
-            ScavengerJuniorTemplate.throwAction = "Throw";
-
-            for (int i = 0; i < StaticWorld.creatureTemplates.Length; i++)
-            {
-                if (StaticWorld.creatureTemplates[i] == null)
-                {
-                    StaticWorld.creatureTemplates[i] = ScavengerJuniorTemplate;
-                }
-            }
-        }
-
-        public void CreatureTemplate_ctor(On.CreatureTemplate.orig_ctor_Type_CreatureTemplate_List1_List1_Relationship orig, global::CreatureTemplate self, global::CreatureTemplate.Type type, global::CreatureTemplate ancestor, List<global::TileTypeResistance> tileResistances, List<global::TileConnectionResistance> connectionResistances, global::CreatureTemplate.Relationship defaultRelationship)
-        {
-            orig(self, type, ancestor, tileResistances, connectionResistances, defaultRelationship);
-            try
-            {
-                if (self.type == SECreatureEnums.ScavengerJunior)
-                {
-                    self.name = "ScavengerJunior";
-                }
-            }
-            catch (Exception except)
-            {
-                Logger.LogError(except);
             }
         }
 
@@ -619,15 +526,7 @@ namespace Scavolution
             }
         }
 
-        public string ScavengerJunior_CreatureSymbol_SpriteNameOfCreature(On.CreatureSymbol.orig_SpriteNameOfCreature orig, IconSymbol.IconSymbolData iconData)
-        {
-            if (iconData.critType == SECreatureEnums.ScavengerJunior)
-            {
-                return "atlases/Kill_ScavengerJunior";
-            }
 
-            return orig(iconData);
-        }
     }
     
 

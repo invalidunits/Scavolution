@@ -256,7 +256,7 @@ namespace Scavolution
             {
                 if (self.parent.creatureTemplate.type == SECreatureEnums.ScavengerJunior)
                 {
-                    if (self.parent.state is JuniorState state && state.alive)
+                    if (JuniorState.map.TryGetValue(self.parent.state, out var state) && self.parent.state.alive)
                     {
                         if (!state.currentParent.HasValue && ScavengerJunior_WantToHaveParent(self))
                         {
@@ -795,7 +795,7 @@ namespace Scavolution
             if (junior.followCreature is not null) return false;
             if (junior.parent.creatureTemplate.type == SECreatureEnums.ScavengerJunior)
             {
-                if (junior.parent.state is JuniorState state && state.alive)
+                if (JuniorState.map.TryGetValue(junior.parent.state, out var state) && junior.parent.state.alive)
                 {
                     if (state.currentParent.HasValue)
                     {
@@ -887,7 +887,7 @@ namespace Scavolution
             }
 
             junior.followCreature = parent;
-            if (junior.parent.state is JuniorState state)
+            if (JuniorState.map.TryGetValue(junior.parent.state, out var state) && junior.parent.state.alive)
             {
                 if (junior.RealAI is ScavengerAI scavai && state.currentParent != parent.ID.number && isPlayer(parent, out _))
                 {
@@ -913,7 +913,7 @@ namespace Scavolution
 
             }
             junior.followCreature = null;
-            if (junior.parent.state is JuniorState state)
+            if (JuniorState.map.TryGetValue(junior.parent.state, out var state))
             {
                 state.currentParent = null;
                 state.cyclesSinceSeenParent = 0;
