@@ -514,7 +514,9 @@ namespace Scavolution
                                 parentalParams.wantCarryTimer = 200;
 
                                 var held_juniors = scavdad.grasps.Where(x => x is not null && x.grabbed is Scavenger scav && scav.isJunior());
-                                if (held_juniors.Count() < 1 && !parent.GetAllConnectedObjects().Contains(self.creature) && scavdad.AI.giftForMe == null)
+                                if (held_juniors.Count() < 1 && !parent.GetAllConnectedObjects().Contains(self.creature) && scavdad.AI.giftForMe == null 
+                                        && scavdad.AI.pathFinder.CoordinateReachable(self.creature.pos) && !self.scavenger.grabbedBy.Any()
+                                    )
                                 {
                                     // Make scav dad into pick me up
                                     scavdad.AI.scavengeCandidate = scavdad.AI.itemTracker.RepresentationForObject(self.scavenger, AddIfMissing: true);
@@ -653,6 +655,13 @@ namespace Scavolution
                 cursor.Emit(OpCodes.Ldarg_0);
                 cursor.EmitDelegate((ScavengerAI self) =>
                 {
+                    if (self.focusCreature?.representedCreature?.realizedCreature is Creature critter &&
+                        ScavengerJunior_CreatureHoldingKid(self, critter) != CreatureHoldingJunior.NotHoldingKid &&
+                        !self.creature.PacifiedBecauseCarried)
+                    {
+                        self.CheckThrow();
+                    }
+
                     if (self.behavior == SEScavengerBehaviors.FollowParent)
                     {
                         if (ScavengerParentTracker.map.TryGetValue(self, out var tracker) && tracker.lastParentPos.HasValue)
@@ -721,7 +730,7 @@ namespace Scavolution
 
                         self.focusCreature = self.tracker.RepresentationForCreature(critter.abstractCreature, true);
                         relationship.type = CreatureTemplate.Relationship.Type.Attacks;
-                        relationship.intensity = (holdingkid == CreatureHoldingJunior.HoldingMYKid) ? 1.0f : 08f;
+                        relationship.intensity = (holdingkid == CreatureHoldingJunior.HoldingMYKid) ? 1.0f : 0.8f;
                         if (dRelation.state is ScavengerAI.ScavengerTrackState state)
                         {
                             state.taggedViolenceType = ScavengerAI.ViolenceType.Lethal;
@@ -1144,22 +1153,11 @@ namespace Scavolution
                 {
                     parentMovingCounter--;
                 }
-
-                if (parentMovingCounter > 0)
-                {
-                    tiredness++;
-                }
-                else
-                {
-                    --tiredness;
-                    tiredness = Mathf.Max(tiredness, 0);
-                }
             }
 
             public AbstractCreature? abstractParent => this.AI.creature.abstractAI.followCreature;
             public WorldCoordinate? lastParentPos;
             public int parentMovingCounter = 0;
-            public int tiredness = 0;
         }
 
 

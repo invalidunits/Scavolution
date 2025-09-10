@@ -109,9 +109,17 @@ namespace Scavolution
                     if (self.isJunior())
                     {
                         self.jumpFinders.Clear();
+                        foreach (Creature.Grasp grasp in self.grabbedBy)
+                        {
+                            if (grasp.grabber is Player || grasp.grabber is Scavenger)
+                            {
+                                grasp.Release();
+                            }
+                        }
+
+
                         return Math.Max(addDelay, 60);
-                    }
-                    
+                    }                    
                     return addDelay;
                 });
 
