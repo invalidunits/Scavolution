@@ -21,7 +21,7 @@ namespace Scavolution
 
 
             RegisterScavengerJunior();
-            RegisterScavengerProphet();
+            // RegisterScavengerImperial();
 
             // Arena stuff
             if (!Futile.atlasManager.DoesContainAtlas("atlases/Kill_ScavengerJunior"))
@@ -53,11 +53,11 @@ namespace Scavolution
                 return "atlases/Kill_ScavengerJunior";
             }
 
-            if (SECreatureEnums.ScavengerProphet != null)
+            if (SECreatureEnums.ScavengerImperial != null)
             {
-                if (iconData.critType == SECreatureEnums.ScavengerProphet)
+                if (iconData.critType == SECreatureEnums.ScavengerImperial)
                 {
-                    return "Kill_ScavengerKing";
+                    return "Kill_EliteScavenger";
                 }
             }
 
@@ -66,9 +66,9 @@ namespace Scavolution
 
         public Color ScavengerJunior_CreatureSymbol_ColorOfCreature(On.CreatureSymbol.orig_ColorOfCreature orig, IconSymbol.IconSymbolData iconData)
         {
-            if (SECreatureEnums.ScavengerProphet != null)
+            if (SECreatureEnums.ScavengerImperial != null)
             {
-                if (iconData.critType == SECreatureEnums.ScavengerProphet)
+                if (iconData.critType == SECreatureEnums.ScavengerImperial)
                 {
                     return new Color(46f / 51f, 0.05490196f, 0.05490196f);
                 }
@@ -85,9 +85,9 @@ namespace Scavolution
                 return self.SandboxItemUnlocked(MultiplayerUnlocks.SandboxUnlockID.Scavenger);
             }
 
-            if (SECreatureEnums.ScavengerProphet != null)
+            if (SECreatureEnums.ScavengerImperial != null)
             {
-                if (unlockID == SEMultiplayerUnlocks.ScavengerProphet)
+                if (unlockID == SEMultiplayerUnlocks.ScavengerImperial)
                 {
                     return self.SandboxItemUnlocked(MultiplayerUnlocks.SandboxUnlockID.Scavenger);
                 }
@@ -108,9 +108,9 @@ namespace Scavolution
                     self.state = new HealthState(self);
                 }
 
-                if (SECreatureEnums.ScavengerProphet != null)
+                if (SECreatureEnums.ScavengerImperial != null)
                 {
-                    if (creatureTemplate.type == SECreatureEnums.ScavengerProphet)
+                    if (creatureTemplate.type == SECreatureEnums.ScavengerImperial)
                     {
                         self.abstractAI = new ScavengerAbstractAI(self.world, self);
                         self.state = new HealthState(self);
@@ -124,7 +124,7 @@ namespace Scavolution
         }
         
         CreatureTemplate? ScavengerJuniorTemplate = null;
-        CreatureTemplate? ScavengerProphetTemplate = null;
+        CreatureTemplate? ScavengerImperialTemplate = null;
 
         public void StaticWorld_InitCustomTemplates(On.StaticWorld.orig_InitCustomTemplates orig)
         {
@@ -187,60 +187,61 @@ namespace Scavolution
                 }
             }
 
-            if (SECreatureEnums.ScavengerProphet != null)
+            if (SECreatureEnums.ScavengerImperial != null)
             {
-                Logger.LogDebug("Initializing Scavenger Prophet");
-                ScavengerProphetTemplate = new CreatureTemplate(SECreatureEnums.ScavengerProphet,
+                Logger.LogDebug("Initializing Scavenger Imperial");
+                ScavengerImperialTemplate = new CreatureTemplate(SECreatureEnums.ScavengerImperial,
                     StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.Scavenger),
                     tile_resistance,
                     tile_connection_resistance,
                     new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Ignores, 0.1f)
                 );
 
-                ScavengerProphetTemplate.BlizzardWanderer = false;
-                ScavengerProphetTemplate.BlizzardAdapted = false;
-                ScavengerProphetTemplate.baseDamageResistance = 3.0f;
-                ScavengerProphetTemplate.baseStunResistance = 1.5f;
-                ScavengerProphetTemplate.instantDeathDamageLimit = 3.0f;
 
-                ScavengerProphetTemplate.offScreenSpeed = 1.25f;
-                ScavengerProphetTemplate.grasps = 4;
-                ScavengerProphetTemplate.AI = true;
-                ScavengerProphetTemplate.requireAImap = true;
-                ScavengerProphetTemplate.abstractedLaziness = 50;
-                ScavengerProphetTemplate.bodySize = 1.2f;
-                ScavengerProphetTemplate.doPreBakedPathing = false;
-                ScavengerProphetTemplate.preBakedPathingAncestor = StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.StandardGroundCreature);
-                ScavengerProphetTemplate.stowFoodInDen = false;
-                ScavengerProphetTemplate.shortcutSegments = 2;
+                ScavengerImperialTemplate.BlizzardWanderer = true;
+                ScavengerImperialTemplate.BlizzardAdapted = true;
+                ScavengerImperialTemplate.baseDamageResistance = 3.0f;
+                ScavengerImperialTemplate.baseStunResistance = 1.5f;
+                ScavengerImperialTemplate.instantDeathDamageLimit = 3.0f;
 
-                ScavengerProphetTemplate.visualRadius = 1000f;
-                ScavengerProphetTemplate.movementBasedVision = 0.3f;
+                ScavengerImperialTemplate.offScreenSpeed = 1.25f;
+                ScavengerImperialTemplate.grasps = 4;
+                ScavengerImperialTemplate.AI = true;
+                ScavengerImperialTemplate.requireAImap = true;
+                ScavengerImperialTemplate.abstractedLaziness = 50;
+                ScavengerImperialTemplate.bodySize = 1.2f;
+                ScavengerImperialTemplate.doPreBakedPathing = false;
+                ScavengerImperialTemplate.preBakedPathingAncestor = StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.StandardGroundCreature);
+                ScavengerImperialTemplate.stowFoodInDen = false;
+                ScavengerImperialTemplate.shortcutSegments = 2;
 
-                ScavengerProphetTemplate.waterRelationship = CreatureTemplate.WaterRelationship.AirAndSurface;
-                ScavengerProphetTemplate.hibernateOffScreen = true;
-                ScavengerProphetTemplate.roamBetweenRoomsChance = -1f;
-                ScavengerProphetTemplate.roamInRoomChance = -1f;
-                ScavengerProphetTemplate.socialMemory = true;
-                ScavengerProphetTemplate.communityID = CreatureCommunities.CommunityID.Scavengers;
-                ScavengerProphetTemplate.communityInfluence = 1f;
-                ScavengerProphetTemplate.dangerousToPlayer = 1.0f;
+                ScavengerImperialTemplate.visualRadius = 1000f;
+                ScavengerImperialTemplate.movementBasedVision = 0.3f;
 
-                ScavengerProphetTemplate.meatPoints = 4;
-                ScavengerProphetTemplate.usesNPCTransportation = true;
-                ScavengerProphetTemplate.usesRegionTransportation = true;
-                ScavengerProphetTemplate.usesCreatureHoles = false;
-                ScavengerProphetTemplate.jumpAction = "Point";
-                ScavengerProphetTemplate.pickupAction = "Pick Up";
-                ScavengerProphetTemplate.throwAction = "Throw";
+                ScavengerImperialTemplate.waterRelationship = CreatureTemplate.WaterRelationship.AirAndSurface;
+                ScavengerImperialTemplate.hibernateOffScreen = true;
+                ScavengerImperialTemplate.roamBetweenRoomsChance = -1f;
+                ScavengerImperialTemplate.roamInRoomChance = -1f;
+                ScavengerImperialTemplate.socialMemory = true;
+                ScavengerImperialTemplate.communityID = CreatureCommunities.CommunityID.Scavengers;
+                ScavengerImperialTemplate.communityInfluence = 1f;
+                ScavengerImperialTemplate.dangerousToPlayer = 1.0f;
 
-                ScavengerProphetTemplate.name = "Scavenger Prophet";
+                ScavengerImperialTemplate.meatPoints = 4;
+                ScavengerImperialTemplate.usesNPCTransportation = true;
+                ScavengerImperialTemplate.usesRegionTransportation = true;
+                ScavengerImperialTemplate.usesCreatureHoles = false;
+                ScavengerImperialTemplate.jumpAction = "Point";
+                ScavengerImperialTemplate.pickupAction = "Pick Up";
+                ScavengerImperialTemplate.throwAction = "Throw";
+
+                ScavengerImperialTemplate.name = "Scavenger Imperial";
 
                 for (int i = 0; i < StaticWorld.creatureTemplates.Length; i++)
                 {
                     if (StaticWorld.creatureTemplates[i] == null)
                     {
-                        StaticWorld.creatureTemplates[i] = ScavengerProphetTemplate;
+                        StaticWorld.creatureTemplates[i] = ScavengerImperialTemplate;
                         break;
                     }
                 }

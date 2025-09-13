@@ -6,7 +6,7 @@ namespace Scavolution
 {
 
     // [BepInDependency("sprobgik.desecratinggraves", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInPlugin("invalidunits.scavolution", "Scavolution", "1.1.2")]
+    [BepInPlugin("invalidunits.scavolution", "Scavolution", "1.1.3")]
     public partial class ScavolutionPlugin : BaseUnityPlugin
     {
         public static ManualLogSource? pubLogger => plugin?.Logger;

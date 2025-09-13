@@ -3,7 +3,7 @@ namespace Scavolution
     static class SECreatureEnums
     {
         public static CreatureTemplate.Type? ScavengerJunior { get; private set; }
-        public static CreatureTemplate.Type? ScavengerProphet { get; private set; }
+        public static CreatureTemplate.Type? ScavengerImperial { get; private set; }
 
         static public void RegisterEnums()
         {
@@ -11,7 +11,7 @@ namespace Scavolution
 
             if (ModManager.MSC && ModManager.Watcher)
             {
-                ScavengerProphet = new CreatureTemplate.Type("Scavolution_ScavengerProphet", true);
+                ScavengerImperial = new CreatureTemplate.Type("Scavolution_ScavengerImperial", true);
             }
         }
 
@@ -23,10 +23,10 @@ namespace Scavolution
                 ScavengerJunior = null;
             }
 
-            if (ScavengerProphet is not null)
+            if (ScavengerImperial is not null)
             {
-                ScavengerProphet.Unregister();
-                ScavengerProphet = null;
+                ScavengerImperial.Unregister();
+                ScavengerImperial = null;
             }
         }
     }
@@ -34,7 +34,7 @@ namespace Scavolution
     static class SEMultiplayerUnlocks
     {
         public static MultiplayerUnlocks.SandboxUnlockID? ScavengerJunior { get; private set; } = null;
-        public static MultiplayerUnlocks.SandboxUnlockID? ScavengerProphet { get; private set; } = null;
+        public static MultiplayerUnlocks.SandboxUnlockID? ScavengerImperial { get; private set; } = null;
 
 
         static public void RegisterEnums()
@@ -45,21 +45,21 @@ namespace Scavolution
                 MultiplayerUnlocks.CreatureUnlockList.Insert(MultiplayerUnlocks.CreatureUnlockList.IndexOf(MultiplayerUnlocks.SandboxUnlockID.Scavenger), ScavengerJunior);
             }
 
-            if (ModManager.MSC && ModManager.Watcher)
-            {
-                ScavengerProphet = new MultiplayerUnlocks.SandboxUnlockID("Scavolution_ScavengerProphet", true);
-                if (!MultiplayerUnlocks.CreatureUnlockList.Contains(ScavengerProphet))
-                {
-                    if (MultiplayerUnlocks.CreatureUnlockList.Contains(MoreSlugcats.MoreSlugcatsEnums.SandboxUnlockID.ScavengerElite))
-                    {
-                        MultiplayerUnlocks.CreatureUnlockList.Insert(MultiplayerUnlocks.CreatureUnlockList.IndexOf(MoreSlugcats.MoreSlugcatsEnums.SandboxUnlockID.ScavengerElite), ScavengerProphet);
-                    }
-                    else
-                    {
-                        MultiplayerUnlocks.CreatureUnlockList.Insert(MultiplayerUnlocks.CreatureUnlockList.IndexOf(MultiplayerUnlocks.SandboxUnlockID.Scavenger), ScavengerProphet);
-                    }
-                }
-            }
+            // if (ModManager.MSC && ModManager.Watcher)
+            // {
+            //     ScavengerImperial = new MultiplayerUnlocks.SandboxUnlockID("Scavolution_ScavengerImperial", true);
+            //     if (!MultiplayerUnlocks.CreatureUnlockList.Contains(ScavengerImperial))
+            //     {
+            //         if (MultiplayerUnlocks.CreatureUnlockList.Contains(MoreSlugcats.MoreSlugcatsEnums.SandboxUnlockID.ScavengerElite))
+            //         {
+            //             MultiplayerUnlocks.CreatureUnlockList.Insert(MultiplayerUnlocks.CreatureUnlockList.IndexOf(MoreSlugcats.MoreSlugcatsEnums.SandboxUnlockID.ScavengerElite) + 1, ScavengerImperial);
+            //         }
+            //         else
+            //         {
+            //             MultiplayerUnlocks.CreatureUnlockList.Insert(MultiplayerUnlocks.CreatureUnlockList.IndexOf(MultiplayerUnlocks.SandboxUnlockID.Scavenger) + 1, ScavengerImperial);
+            //         }
+            //     }
+            // }
         }
         
         static public void UnregisterEnums()
@@ -70,10 +70,10 @@ namespace Scavolution
                 ScavengerJunior = null;
             }
 
-            if (ScavengerProphet is not null)
+            if (ScavengerImperial is not null)
             {
-                ScavengerProphet.Unregister();
-                ScavengerProphet = null;
+                ScavengerImperial.Unregister();
+                ScavengerImperial = null;
             }
         }
     }
