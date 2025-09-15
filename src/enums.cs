@@ -45,21 +45,21 @@ namespace Scavolution
                 MultiplayerUnlocks.CreatureUnlockList.Insert(MultiplayerUnlocks.CreatureUnlockList.IndexOf(MultiplayerUnlocks.SandboxUnlockID.Scavenger), ScavengerJunior);
             }
 
-            // if (ModManager.MSC && ModManager.Watcher)
-            // {
-            //     ScavengerImperial = new MultiplayerUnlocks.SandboxUnlockID("Scavolution_ScavengerImperial", true);
-            //     if (!MultiplayerUnlocks.CreatureUnlockList.Contains(ScavengerImperial))
-            //     {
-            //         if (MultiplayerUnlocks.CreatureUnlockList.Contains(MoreSlugcats.MoreSlugcatsEnums.SandboxUnlockID.ScavengerElite))
-            //         {
-            //             MultiplayerUnlocks.CreatureUnlockList.Insert(MultiplayerUnlocks.CreatureUnlockList.IndexOf(MoreSlugcats.MoreSlugcatsEnums.SandboxUnlockID.ScavengerElite) + 1, ScavengerImperial);
-            //         }
-            //         else
-            //         {
-            //             MultiplayerUnlocks.CreatureUnlockList.Insert(MultiplayerUnlocks.CreatureUnlockList.IndexOf(MultiplayerUnlocks.SandboxUnlockID.Scavenger) + 1, ScavengerImperial);
-            //         }
-            //     }
-            // }
+            if (ModManager.MSC && ModManager.Watcher)
+            {
+                ScavengerImperial = new MultiplayerUnlocks.SandboxUnlockID("Scavolution_ScavengerImperial", true);
+                if (!MultiplayerUnlocks.CreatureUnlockList.Contains(ScavengerImperial))
+                {
+                    if (MultiplayerUnlocks.CreatureUnlockList.Contains(MoreSlugcats.MoreSlugcatsEnums.SandboxUnlockID.ScavengerElite))
+                    {
+                        MultiplayerUnlocks.CreatureUnlockList.Insert(MultiplayerUnlocks.CreatureUnlockList.IndexOf(MoreSlugcats.MoreSlugcatsEnums.SandboxUnlockID.ScavengerElite) + 1, ScavengerImperial);
+                    }
+                    else
+                    {
+                        MultiplayerUnlocks.CreatureUnlockList.Insert(MultiplayerUnlocks.CreatureUnlockList.IndexOf(MultiplayerUnlocks.SandboxUnlockID.Scavenger) + 1, ScavengerImperial);
+                    }
+                }
+            }
         }
         
         static public void UnregisterEnums()

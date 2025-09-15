@@ -21,7 +21,7 @@ namespace Scavolution
 
 
             RegisterScavengerJunior();
-            // RegisterScavengerImperial();
+            RegisterScavengerImperial();
 
             // Arena stuff
             if (!Futile.atlasManager.DoesContainAtlas("atlases/Kill_ScavengerJunior"))
@@ -57,7 +57,7 @@ namespace Scavolution
             {
                 if (iconData.critType == SECreatureEnums.ScavengerImperial)
                 {
-                    return "Kill_EliteScavenger";
+                    return "Kill_ScavengerElite";
                 }
             }
 
@@ -153,7 +153,7 @@ namespace Scavolution
             ScavengerJuniorTemplate.abstractedLaziness = 50;
             ScavengerJuniorTemplate.bodySize = 0.8f;
             ScavengerJuniorTemplate.doPreBakedPathing = false;
-            ScavengerJuniorTemplate.preBakedPathingAncestor = StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.StandardGroundCreature);
+            ScavengerJuniorTemplate.preBakedPathingAncestor = StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.Scavenger);
             ScavengerJuniorTemplate.stowFoodInDen = false;
             ScavengerJuniorTemplate.shortcutSegments = 2;
 
@@ -211,7 +211,7 @@ namespace Scavolution
                 ScavengerImperialTemplate.abstractedLaziness = 50;
                 ScavengerImperialTemplate.bodySize = 1.2f;
                 ScavengerImperialTemplate.doPreBakedPathing = false;
-                ScavengerImperialTemplate.preBakedPathingAncestor = StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.StandardGroundCreature);
+                ScavengerImperialTemplate.preBakedPathingAncestor = StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.Scavenger);
                 ScavengerImperialTemplate.stowFoodInDen = false;
                 ScavengerImperialTemplate.shortcutSegments = 2;
 
