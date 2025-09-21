@@ -6,7 +6,8 @@ using UnityEngine;
 
 namespace Scavolution 
 {
-    public struct EvolutionRecipe {
+    public struct EvolutionRecipe
+    {
         public CreatureTemplate.Type starts_as;
         public CreatureTemplate.Type ends_as;
         public AbstractPhysicalObject.AbstractObjectType item_required;
@@ -126,10 +127,21 @@ namespace Scavolution
 
         static void AddM4rblelousEntityPackRecipes(ref List<EvolutionRecipe> list_recipes)
         {
-            list_recipes.Add(new EvolutionRecipe(DLCSharedEnums.CreatureTemplateType.ScavengerElite,
+            if (ModManager.DLCShared)
+            {
+                list_recipes.Add(new EvolutionRecipe(DLCSharedEnums.CreatureTemplateType.ScavengerElite,
                         LBMergedMods.Enums.CreatureTemplateType.ScavengerSentinel, AbstractPhysicalObject.AbstractObjectType.VultureMask, 1));
-            list_recipes.Add(new EvolutionRecipe(DLCSharedEnums.CreatureTemplateType.ScavengerElite,
-                    LBMergedMods.Enums.CreatureTemplateType.ScavengerSentinel, LBMergedMods.Enums.AbstractObjectType.ThornyStrawberry, 1));
+                list_recipes.Add(new EvolutionRecipe(DLCSharedEnums.CreatureTemplateType.ScavengerElite,
+                        LBMergedMods.Enums.CreatureTemplateType.ScavengerSentinel, LBMergedMods.Enums.AbstractObjectType.ThornyStrawberry, 1));
+            }
+            else
+            {
+                list_recipes.Add(new EvolutionRecipe(DLCSharedEnums.CreatureTemplateType.ScavengerElite,
+                        LBMergedMods.Enums.CreatureTemplateType.ScavengerSentinel, AbstractPhysicalObject.AbstractObjectType.VultureMask, 1));
+                list_recipes.Add(new EvolutionRecipe(DLCSharedEnums.CreatureTemplateType.ScavengerElite,
+                        LBMergedMods.Enums.CreatureTemplateType.ScavengerSentinel, LBMergedMods.Enums.AbstractObjectType.ThornyStrawberry, 1));
+            }
+            
         }
     }
 }
