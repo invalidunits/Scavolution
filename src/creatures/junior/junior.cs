@@ -45,8 +45,8 @@ namespace Scavolution
             JuniorOnBackHooks();
 
             // Gear
-            On.ScavengerAbstractAI.InitGearUp += AbstractScavengerAI_InitGearUP;
-            On.ScavengerAbstractAI.ReGearInDen += AbstractScavengerAI_ReGearInDen;
+            On.ScavengerAbstractAI.InitGearUp += ScavengerJunior_AbstractScavengerAI_InitGearUP;
+            On.ScavengerAbstractAI.ReGearInDen += ScavengerJunior_AbstractScavengerAI_ReGearInDen;
 
             // Jumping
             IL.Scavenger.Update += Scavenger_UpdateScavengerJumpJunior;
@@ -220,40 +220,68 @@ namespace Scavolution
 
         void ScavJuniorGearUp(ScavengerAbstractAI self)
         {
-            int restockOBJs = 2;
+            int restockOBJs = self.parent.creatureTemplate.grasps;
+            List<int> forbiddengrasps = [];
             foreach (AbstractPhysicalObject.AbstractObjectStick stick in self.parent.stuckObjects)
             {
-                if ((stick is AbstractPhysicalObject.CreatureGripStick) && (stick.A == self.parent))
+                if ((stick is AbstractPhysicalObject.CreatureGripStick gripstick) && (stick.A == self.parent))
                 {
-                    restockOBJs -= 1;
+                    forbiddengrasps.Add(gripstick.grasp);
                 }
             }
 
+            List<(AbstractPhysicalObject.AbstractObjectType?, float)> itemweights = [
+                ( null, 0.3f ),
+                ( AbstractPhysicalObject.AbstractObjectType.ScavengerBomb, 0.4f ),
+                ( AbstractPhysicalObject.AbstractObjectType.DataPearl, 0.1f ),
+                ( AbstractPhysicalObject.AbstractObjectType.Rock, 0.5f ),
+            ];
+
+            if (ModManager.Watcher)
+            {
+                itemweights.Add((Watcher.WatcherEnums.AbstractObjectType.Boomerang, 0.3f));
+            }
+
+
+            float totalSum = itemweights.Select(x => x.Item2).Sum();
+            var state = UnityEngine.Random.state;
             for (int i = 0; i < restockOBJs; i++)
             {
-                if (UnityEngine.Random.value < 0.4) continue;
-
-                if (UnityEngine.Random.value < 0.6)
+                if (forbiddengrasps.Contains(i)) continue;
+                float sum = totalSum;
+                float value = sum * (UnityEngine.Random.Range(0, int.MaxValue) / (float)int.MaxValue); // use int range for max exclusivity
+                foreach ((AbstractPhysicalObject.AbstractObjectType? itemtype, float weight) in itemweights.ToArray())
                 {
-                    AbstractPhysicalObject abstractPhysicalObject = new AbstractPhysicalObject(self.world, AbstractPhysicalObject.AbstractObjectType.ScavengerBomb, null, self.parent.pos, self.world.game.GetNewID());
-                    self.world.GetAbstractRoom(self.parent.pos).AddEntity(abstractPhysicalObject);
-                    new AbstractPhysicalObject.CreatureGripStick(self.parent, abstractPhysicalObject, i, true);
-                }
-                else if (ModManager.Watcher && UnityEngine.Random.value < 0.7)
-                {
-                    AbstractPhysicalObject abstractPhysicalObject = new AbstractPhysicalObject(self.world, Watcher.WatcherEnums.AbstractObjectType.Boomerang, null, self.parent.pos, self.world.game.GetNewID());
-                    self.world.GetAbstractRoom(self.parent.pos).AddEntity(abstractPhysicalObject);
-                    new AbstractPhysicalObject.CreatureGripStick(self.parent, abstractPhysicalObject, i, true);
-                }
-                else
-                {
-                    AbstractPhysicalObject abstractPhysicalObject = new AbstractPhysicalObject(self.world, AbstractPhysicalObject.AbstractObjectType.Rock, null, self.parent.pos, self.world.game.GetNewID());
-                    self.world.GetAbstractRoom(self.parent.pos).AddEntity(abstractPhysicalObject);
-                    new AbstractPhysicalObject.CreatureGripStick(self.parent, abstractPhysicalObject, i, true);
+                    value -= weight;
+                    if (value <= 0)
+                    {
+                        if (itemtype == null) break;
+                        AbstractPhysicalObject abstractPhysicalObject;
+                        if (itemtype == AbstractPhysicalObject.AbstractObjectType.DataPearl)
+                        {
+                            // TODO: junior lore pearl
+                            abstractPhysicalObject = new DataPearl.AbstractDataPearl(self.world,
+                                AbstractPhysicalObject.AbstractObjectType.DataPearl, null,
+                                self.parent.pos, self.world.game.GetNewID(), -1, -1, null,
+                                DataPearl.AbstractDataPearl.DataPearlType.Misc);
+                        }
+                        else if (itemtype == AbstractPhysicalObject.AbstractObjectType.GraffitiBomb)
+                        {
+                            abstractPhysicalObject = new AbstractConsumable(self.world, itemtype, null, self.parent.pos, self.world.game.GetNewID(), -1, -1, null);
+                        }
+                        else
+                        {
+                            abstractPhysicalObject = new AbstractPhysicalObject(self.world, itemtype, null, self.parent.pos, self.world.game.GetNewID());
+                        }
+                        self.world.GetAbstractRoom(self.parent.pos).AddEntity(abstractPhysicalObject);
+                        new AbstractPhysicalObject.CreatureGripStick(self.parent, abstractPhysicalObject, i, true);
+                        break;
+                    }
                 }
             }
+            UnityEngine.Random.state = state;
         }
-        void AbstractScavengerAI_InitGearUP(On.ScavengerAbstractAI.orig_InitGearUp orig, ScavengerAbstractAI self)
+        void ScavengerJunior_AbstractScavengerAI_InitGearUP(On.ScavengerAbstractAI.orig_InitGearUp orig, ScavengerAbstractAI self)
         {
             if (self.parent.creatureTemplate.type == SECreatureEnums.ScavengerJunior)
             {
@@ -263,7 +291,7 @@ namespace Scavolution
             orig(self);
         }
 
-        void AbstractScavengerAI_ReGearInDen(On.ScavengerAbstractAI.orig_ReGearInDen orig, ScavengerAbstractAI self)
+        void ScavengerJunior_AbstractScavengerAI_ReGearInDen(On.ScavengerAbstractAI.orig_ReGearInDen orig, ScavengerAbstractAI self)
         {
             if (self.parent.creatureTemplate.type == SECreatureEnums.ScavengerJunior)
             {

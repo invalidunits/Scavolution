@@ -9,7 +9,7 @@ namespace Scavolution
     {
         static public bool NotSlugcatPlayables { get; private set; } = false;
         static public bool M4rblelousEntityPack { get; private set; } = false;
-        static void InitializeModCompatibility()
+        static public void InitializeModCompatibility()
         {
             NotSlugcatPlayables = ModManager.ActiveMods.Any(x => x.id == "sprobgik.desecratinggraves");
             if (NotSlugcatPlayables) ScavolutionPlugin.pubLogger?.LogDebug("not playable slugcats has been enabled!");
@@ -17,12 +17,12 @@ namespace Scavolution
             if (M4rblelousEntityPack) ScavolutionPlugin.pubLogger?.LogDebug("The M4rblelous Entity Pack has been enabled!");
         }
 
-        static bool ControlledScavenger(AbstractCreature scav)
+        static public bool ControlledScavenger(AbstractCreature scav)
         {
             return (ModManager.MSC && scav.controlled) || (NotSlugcatPlayables && NotSlugcatPlayableScavengerImpl(scav));
         }
 
-        static bool NotSlugcatPlayableScavengerImpl(AbstractCreature scav)
+        static public bool NotSlugcatPlayableScavengerImpl(AbstractCreature scav)
         {
             if (NotSlugcatPlayables)
             {

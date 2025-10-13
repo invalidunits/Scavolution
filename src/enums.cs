@@ -9,7 +9,7 @@ namespace Scavolution
         {
             ScavengerJunior = new CreatureTemplate.Type("Scavolution_ScavengerJunior", true);
 
-            if (ModManager.MSC && ModManager.Watcher)
+            if (ModManager.Watcher)
             {
                 ScavengerImperial = new CreatureTemplate.Type("Scavolution_ScavengerImperial", true);
             }
@@ -61,7 +61,7 @@ namespace Scavolution
                 }
             }
         }
-        
+
         static public void UnregisterEnums()
         {
             if (ScavengerJunior is not null)
@@ -113,6 +113,45 @@ namespace Scavolution
             {
                 FollowParent.Unregister();
                 FollowParent = null;
+            }
+        }
+    }
+
+    static class SEScavengerMovementModes
+    {
+        public static Scavenger.MovementMode? Swinging { get; private set; }
+        public static Scavenger.MovementMode? OnBack { get; private set; }
+
+        static public void RegisterEnums()
+        {
+            Swinging = new Scavenger.MovementMode("Scavolution_Swinging", true);
+            OnBack = new Scavenger.MovementMode("Scavolution_OnBack", true);
+        }
+
+        static public void UnregisterEnums()
+        {
+            if (Swinging is not null)
+            {
+                Swinging.Unregister();
+                Swinging = null;
+            }
+        }
+    }
+
+    public class SEScavengerAnimations
+    {
+        public static Scavenger.ScavengerAnimation.ID? Flail { get; private set; }
+        static public void RegisterEnums()
+        {
+            Flail = new Scavenger.ScavengerAnimation.ID("Scavolution_Flail", true);
+        }
+
+        static public void UnregisterEnums()
+        {
+            if (Flail is not null)
+            {
+                Flail.Unregister();
+                Flail = null;
             }
         }
     }

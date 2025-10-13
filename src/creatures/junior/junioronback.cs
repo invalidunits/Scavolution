@@ -86,12 +86,13 @@ namespace Scavolution
                                 ScavolutionPlugin.pubLogger?.LogDebug("Attempting to jump off back");
                                 Scavenger.JumpFinder jumpFinder = new Scavenger.JumpFinder(scavenger.room, scavenger, scavenger.abstractCreature.pos.Tile);
                                 bool direction = false;
-                                if (owner is Player p2) {
+                                if (owner is Player p2)
+                                {
                                     direction = p2.flipDirection > 0f;
                                 }
-                                
+
                                 jumpFinder.bestJump = new Scavenger.JumpFinder.JumpInstruction(scavenger.mainBodyChunk.pos, new Vector2(direction ? (-11.5f) : 11.5f, 13.5f), 0.5f + UnityEngine.Random.Range(-0.1f, 0.1f));
-                                PathFinder.PathingCell goalCell = scavenger.AI.pathFinder.PathingCellAtWorldCoordinate(scavenger.abstractCreature.pos + new IntVector2(direction? -10 : 10, 0));
+                                PathFinder.PathingCell goalCell = scavenger.AI.pathFinder.PathingCellAtWorldCoordinate(scavenger.abstractCreature.pos + new IntVector2(direction ? -10 : 10, 0));
                                 jumpFinder.bestJump.goalCell = goalCell;
                                 scavenger.jumpFinders.Clear();
                                 scavenger.jumpFinders.Add(jumpFinder);
@@ -266,7 +267,7 @@ namespace Scavolution
                 stick = null;
                 scavenger = null;
             }
-            
+
         }
 
         public void Throw(bool eu)
@@ -334,7 +335,7 @@ namespace Scavolution
         {
             if (JuniorOnBack.creature_map.TryGetValue(critter, out var ret)) return ret;
             return new JuniorOnBack(critter);
-        } 
+        }
     }
 
 
@@ -359,6 +360,9 @@ namespace Scavolution
             On.Scavenger.Update += ScavengerJunior_Scavenger_UpdateOnBack;
             IL.Scavenger.GraphicsModuleUpdated += ScavengerJunior_Scavenger_GraphicsModuleUpdated;
             On.Creature.Grab += ScavengerJunior_Creature_Grab;
+
+            // scav on back
+            On.Scavenger.Act += JuniorOnBack_ScavengerAct;
 
             // graphical stuff
             new Hook(typeof(ScavengerGraphics.ScavengerHand).GetMethod(nameof(ScavengerGraphics.ScavengerHand.CheckForGrabPos),
@@ -388,29 +392,29 @@ namespace Scavolution
         float ScavengerJunior_MovementSpeed(Func<Scavenger, float> orig, global::Scavenger self)
         {
             if (JuniorOnBack.onback_map.TryGetValue(self, out _)) return 0.0f;
-            return orig(self);   
+            return orig(self);
         }
 
         bool ScavengerJunior_AllowIdleMoves(Func<Scavenger, bool> orig, global::Scavenger self)
         {
             if (JuniorOnBack.onback_map.TryGetValue(self, out _)) return false;
-            return orig(self);   
+            return orig(self);
         }
 
         bool ScavengerJunior_KnucklePosLegal(On.Scavenger.orig_KnucklePosLegal orig, global::Scavenger self, Vector2? testPos)
         {
             if (JuniorOnBack.onback_map.TryGetValue(self, out _)) return false;
-            return orig(self, testPos);   
+            return orig(self, testPos);
         }
 
         void NotSlugcatPlayables_JuniorOnBackHooks()
         {
             new ILHook(typeof(SprobDesecratingGraves.ScavengerHooks).GetMethod(nameof(SprobDesecratingGraves.ScavengerHooks.GraphicsModuleUpdated),
                     System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public
-                ), NotSlugcatPlayables_Scavenger_GraphicsModuleUpdate); 
+                ), NotSlugcatPlayables_Scavenger_GraphicsModuleUpdate);
             new ILHook(typeof(SprobDesecratingGraves.ScavengerHooks).GetMethod(nameof(SprobDesecratingGraves.ScavengerHooks.ControlledAct),
                     System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public
-                ), NotSlugcatPlayables_Scavenger_ControlledAct); 
+                ), NotSlugcatPlayables_Scavenger_ControlledAct);
         }
         void NotSlugcatPlayables_Scavenger_ControlledAct(ILContext context)
         {
@@ -512,7 +516,7 @@ namespace Scavolution
                         HandholdWithJunior(self, scav, itemPos, eu);
                         return true;
                     }
-                    
+
                     return false;
                 });
 
@@ -561,7 +565,7 @@ namespace Scavolution
                             {
                                 return false;
                             }
-                            
+
                             if (self.grasps.Any(x => x?.grabbed == otherscav))
                             {
                                 return false;
@@ -580,14 +584,14 @@ namespace Scavolution
                     }
                     return true;
                 });
-                
+
                 cursor.Emit(OpCodes.Brfalse, skip);
             }
             catch (Exception except)
             {
                 Logger.LogDebug(except);
             }
-            
+
         }
 
         void ScavengerJunior_Scavenger_LookForItemsToPickUp(ILContext context)
@@ -649,7 +653,8 @@ namespace Scavolution
         // }
 
 
-        bool ScavengerJunior_Weapon_HitThisObject(On.Weapon.orig_HitThisObject orig, Weapon self, global::PhysicalObject obj) {
+        bool ScavengerJunior_Weapon_HitThisObject(On.Weapon.orig_HitThisObject orig, Weapon self, global::PhysicalObject obj)
+        {
             try
             {
                 if (obj is Scavenger scav)
@@ -682,12 +687,12 @@ namespace Scavolution
                         }
                     }
 
-                    
+
                 }
             }
             catch (Exception except)
             {
-                Logger.LogDebug(except);   
+                Logger.LogDebug(except);
             }
 
             return orig(self, obj);
@@ -735,7 +740,7 @@ namespace Scavolution
                     }
 
                     onback.Update();
-                }              
+                }
             }
             catch (Exception except)
             {
@@ -750,15 +755,18 @@ namespace Scavolution
             {
                 return false;
             }
-        
+
             return orig(self);
 
         }
 
-        float2 ScavengerJunior_ScavengerGraphics_ScavengerHand_ShoulderJoint(ScavengerGraphics.ScavengerHand scavengerHand, float timeStacker = 0.0f)
+        static public float2 ScavengerJunior_ScavengerGraphics_ScavengerHand_ShoulderJoint(ScavengerGraphics.ScavengerHand scavengerHand, float timeStacker = 0.0f)
         {
             float2 joint = math.lerp(scavengerHand.graphics.drawPositions[scavengerHand.graphics.chestDrawPos, 1], scavengerHand.graphics.drawPositions[scavengerHand.graphics.chestDrawPos, 0], timeStacker);
-            joint += Custom.PerpendicularVector((joint - math.lerp(scavengerHand.graphics.drawPositions[scavengerHand.graphics.hipsDrawPos, 1], scavengerHand.graphics.drawPositions[scavengerHand.graphics.hipsDrawPos, 0], timeStacker)).normalized()) * (1f - Mathf.Abs(Mathf.Lerp(scavengerHand.graphics.lastFlip, scavengerHand.graphics.flip, timeStacker))) * 10f * (((float)scavengerHand.limbNumber == 0f) ? (-1f) : 1f);
+            joint += Custom.PerpendicularVector(
+                (joint - math.normalize(math.lerp(scavengerHand.graphics.drawPositions[scavengerHand.graphics.hipsDrawPos, 1], scavengerHand.graphics.drawPositions[scavengerHand.graphics.hipsDrawPos, 0], timeStacker)))) *
+                (1f - Mathf.Abs(Mathf.Lerp(scavengerHand.graphics.lastFlip, scavengerHand.graphics.flip, timeStacker))) * 
+                10f * (((float)scavengerHand.limbNumber == 0f) ? (-1f) : 1f);
             joint += Custom.DirVec(math.lerp(scavengerHand.graphics.drawPositions[scavengerHand.graphics.hipsDrawPos, 1], scavengerHand.graphics.drawPositions[scavengerHand.graphics.hipsDrawPos, 0], timeStacker), math.lerp(scavengerHand.graphics.drawPositions[scavengerHand.graphics.chestDrawPos, 1], scavengerHand.graphics.drawPositions[scavengerHand.graphics.chestDrawPos, 0], timeStacker)) * 5f;
             return new Vector2(joint.x, joint.y);
         }
@@ -792,7 +800,7 @@ namespace Scavolution
                             return null!;
                         }
                     }
-                    
+
                 }
             }
             catch (Exception except)
@@ -839,19 +847,11 @@ namespace Scavolution
                     }
                 }
 
-                var gesturing = (
-                    self.limbNumber == 0 &&
-                    self.scavenger.animation != null &&
-                    self.scavenger.animation.id == Scavenger.ScavengerAnimation.ID.Throw) ||
-                    (self.limbNumber == 0 &&
-                    self.scavenger.animation != null &&
-                    self.scavenger.animation.id == Scavenger.ScavengerAnimation.ID.ThrowCharge &&
-                    self.scavenger.animation.Active) ||
-                    (self.scavenger.Pointing && self.limbNumber ==
-                        (self.scavenger.animation as Scavenger.PointingAnimation).PointingArm) ||
-                    (self.scavenger.Communicating && self.limbNumber ==
-                        (self.scavenger.animation as Scavenger.CommunicationAnimation).GestureArm);
-                        
+                var gesturing = (self.limbNumber == 0 && self.scavenger.animation is Scavenger.ThrowAnimation) ||
+                                (self.limbNumber == 0 && self.scavenger.animation is Scavenger.ThrowChargeAnimation) ||
+                                (self.scavenger.animation is Scavenger.PointingAnimation panim && self.limbNumber == panim.PointingArm) ||
+                                (self.scavenger.animation is Scavenger.CommunicationAnimation canim && self.limbNumber == canim.GestureArm);
+
                 if (!gesturing && JuniorOnBack.onback_map.TryGetValue(self.scavenger, out var onback))
                 {
                     if (onback.owner is Scavenger scav)
@@ -914,7 +914,7 @@ namespace Scavolution
                         HandholdWithJunior(self, scav, itemPos, eu);
                         return true;
                     }
-                    
+
                     return false;
                 });
 
@@ -1032,7 +1032,7 @@ namespace Scavolution
                 if (self is Creature critter && (critter is Player || critter is Scavenger))
                 {
                     critter.GetJuniorOnBack().ChangeOverlap(true);
-                } 
+                }
             }
             catch (Exception except)
             {
@@ -1145,7 +1145,8 @@ namespace Scavolution
 
                 cursor.Emit(OpCodes.Ldarg, 0);
                 cursor.Emit(OpCodes.Ldarg, 1);
-                cursor.EmitDelegate((Player self, bool eu) => {
+                cursor.EmitDelegate((Player self, bool eu) =>
+                {
                     var onback = self.GetJuniorOnBack();
                     if (self.wantToThrow > 0 && onback.scavenger != null)
                     {
@@ -1213,7 +1214,7 @@ namespace Scavolution
                         {
                             return Player.ObjectGrabability.CantGrab;
                         }
-                    } 
+                    }
                 }
             }
             catch (Exception except)
@@ -1223,5 +1224,86 @@ namespace Scavolution
 
             return orig(self, obj);
         }
+
+        void JuniorOnBack_ScavengerAct(On.Scavenger.orig_Act orig, Scavenger self)
+        {
+            if (JuniorOnBack.onback_map.TryGetValue(self, out _))
+            {
+                self.movMode = SEScavengerMovementModes.OnBack;
+                self.moveModeChangeCounter = 5;
+            }
+
+            if (self.movMode == SEScavengerMovementModes.OnBack)
+            {
+                if (self.animation != null)
+                {
+                    if (!self.animation.Continue)
+                    {
+                        self.animation = null;
+                    }
+                    else
+                    {
+                        self.animation.Update();
+                    }
+                }
+
+                self.AI.Update();
+                self.CombatUpdate();
+                self.JumpLogicUpdate();
+
+                Vector2 idealHeadPos = self.mainBodyChunk.pos + self.HeadLookDir * self.bodyChunkConnections[1].distance * 0.6f;
+                self.bodyChunks[2].pos = Vector2.Lerp(self.bodyChunks[2].pos, idealHeadPos, 0.25f);
+
+                if (--self.moveModeChangeCounter == 0)
+                {
+                    self.movMode = Scavenger.MovementMode.StandStill;
+                }
+
+                return;
+            }
+            else
+            {
+                orig(self);
+            }
+        }
+
+        void ScavengerJunior_RunningUpdate(ILContext context)
+        {
+            try
+            {
+                ILCursor cursor = new ILCursor(context);
+                /*
+                    125	01BD	ldarg.0
+                    126	01BE	ldfld	class Scavenger/MovementMode Scavenger::movMode
+                    127	01C3	ldsfld	class Scavenger/MovementMode Scavenger/MovementMode::Climb
+                    128	01C8	call	bool class ExtEnum`1<class Scavenger/MovementMode>::op_Equality(class ExtEnum`1<!0>, class ExtEnum`1<!0>)
+                */
+
+                ILLabel? outlabel = null;
+                cursor.GotoNext(
+                    x => x.MatchLdarg(0),
+                    x => x.MatchLdfld<Scavenger>(nameof(Scavenger.movMode)),
+                    x => x.MatchLdsfld<Scavenger.MovementMode>(nameof(Scavenger.MovementMode.Climb)),
+                    x => x.MatchCall<ExtEnum<Scavenger.MovementMode>>("op_Equality"),
+                    x => x.MatchBrtrue(out outlabel)
+                );
+
+                if (outlabel is null) throw new InvalidOperationException("outlabel is null?");
+
+                cursor.Emit(OpCodes.Ldarg_0);
+                cursor.EmitDelegate((Scavenger scav) =>
+                {
+                    return scav.movMode == SEScavengerMovementModes.OnBack;
+                });
+                cursor.Emit(OpCodes.Brtrue, outlabel);
+            }
+            catch (Exception except)
+            {
+                Logger.LogError(except);
+            }
+        }
+    
     }
+    
+
 }

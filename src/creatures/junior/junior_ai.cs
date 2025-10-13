@@ -291,10 +291,10 @@ namespace Scavolution
                             if (self.squad == null)
                             {
                                 if (!self.GoHome()) self.GoToRoom(self.followCreature.pos.room);
-                                if (self.followCreature.abstractAI is ScavengerAbstractAI parentAI && parentAI.squad != null)
-                                {
-                                    parentAI.squad.AddMember(self.parent);
-                                }
+                                // if (self.followCreature.abstractAI is ScavengerAbstractAI parentAI && parentAI.squad != null)
+                                // {
+                                //     parentAI.squad.AddMember(self.parent);
+                                // }
                             }
                         }
                     }

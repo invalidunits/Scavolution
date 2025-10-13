@@ -39,6 +39,12 @@ namespace Scavolution
 
                 SEScavengerBehaviors.UnregisterEnums();
                 SEScavengerBehaviors.RegisterEnums();
+
+                SEScavengerMovementModes.UnregisterEnums();
+                SEScavengerMovementModes.RegisterEnums();
+
+                SEScavengerAnimations.UnregisterEnums();
+                SEScavengerAnimations.RegisterEnums();
                 
                 if (!Init)
                 {
