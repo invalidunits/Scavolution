@@ -347,6 +347,7 @@ namespace Scavolution
             new Hook(typeof(Player).GetProperty(nameof(Player.CanPutSpearToBack)).GetGetMethod(), PutToBackJuniorFirst);
             new Hook(typeof(Player).GetProperty(nameof(Player.CanRetrieveSlugFromBack)).GetGetMethod(), PutToBackJuniorFirst);
             new Hook(typeof(Player).GetProperty(nameof(Player.CanRetrieveSpearFromBack)).GetGetMethod(), PutToBackJuniorFirst);
+            new Hook(typeof(AbstractCreature).GetProperty(nameof(AbstractCreature.PacifiedBecauseCarried)).GetGetMethod(), ScavengerJunior_PacifiedBecauseCarried)
 
             // scav on players back
             On.Player.Grabability += Player_GrababilityJunior;
@@ -389,6 +390,13 @@ namespace Scavolution
                 NotSlugcatPlayables_JuniorOnBackHooks();
             }
         }
+
+        bool ScavengerJunior_PacifiedBecauseCarried(Func<AbstractCreature, bool> orig, AbstractCreature creature)
+        {
+            if (creature.stuckObjects.Any(x => x is JuniorOnBack.AbstractJuniorOnBackStick stick && stick.B == creature)) return true;
+            return orig(creature);
+        }
+
         float ScavengerJunior_MovementSpeed(Func<Scavenger, float> orig, global::Scavenger self)
         {
             if (JuniorOnBack.onback_map.TryGetValue(self, out _)) return 0.0f;

@@ -656,8 +656,7 @@ namespace Scavolution
                 cursor.EmitDelegate((ScavengerAI self) =>
                 {
                     if (self.focusCreature?.representedCreature?.realizedCreature is Creature critter &&
-                        ScavengerJunior_CreatureHoldingKid(self, critter) != CreatureHoldingJunior.NotHoldingKid &&
-                        !self.creature.PacifiedBecauseCarried)
+                        ScavengerJunior_CreatureHoldingKid(self, critter) != CreatureHoldingJunior.NotHoldingKid)
                     {
                         self.CheckThrow();
                     }
