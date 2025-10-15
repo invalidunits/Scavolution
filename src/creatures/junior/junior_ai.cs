@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -298,6 +299,58 @@ namespace Scavolution
                             }
                         }
                     }
+
+                    // try to get on back abstractly
+
+                    if (self.TimeInfluencedRandomRoll(0.0035f, time))
+                    {
+                        if (self.followCreature?.abstractAI is ScavengerAbstractAI grabberAI)
+                        {
+                            if (self.followCreature.realizedCreature is null && self.parent.realizedCreature is null)
+                            {
+                                if (ScavengerJunior_AbstractWantToBeHeld(self, grabberAI) && !self.parent.PacifiedBecauseCarried)
+                                {
+                                    bool hasKidOnBackAlready = grabberAI.parent.stuckObjects.OfType<JuniorOnBack.AbstractJuniorOnBackStick>().Any(x => x.A == grabberAI.parent);
+                                    if (!hasKidOnBackAlready)
+                                    {
+                                        new JuniorOnBack.AbstractJuniorOnBackStick(grabberAI.parent, self.parent);
+                                        Logger.LogDebug($"Abstractly added onback stick {grabberAI.parent} on {self.parent}");
+                                    }
+                                    else
+                                    {
+                                        var freegrasp = Enumerable.Range(0, self.followCreature.creatureTemplate.grasps).Except(
+                                            grabberAI.parent.stuckObjects.OfType<AbstractPhysicalObject.CreatureGripStick>()
+                                            .Where(x => x.A == grabberAI.parent)
+                                            .Select(x => x.grasp)
+                                        );
+
+                                        if (freegrasp.Any())
+                                        {
+                                            new AbstractPhysicalObject.CreatureGripStick(grabberAI.parent, self.parent, freegrasp.First(), true);
+                                            Logger.LogDebug($"Abstractly added grasp {grabberAI.parent} on {self.parent}");
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    if (self.parent.stuckObjects
+                                        .OfType<JuniorOnBack.AbstractJuniorOnBackStick>()
+                                        .FirstOrDefault(x => x.A == grabberAI.parent) is JuniorOnBack.AbstractJuniorOnBackStick onbackStick)
+                                    {
+                                        onbackStick.Deactivate();
+                                    }
+
+                                    if (self.parent.stuckObjects
+                                        .OfType<AbstractPhysicalObject.CreatureGripStick>()
+                                        .FirstOrDefault(x => x.A == grabberAI.parent) is AbstractPhysicalObject.CreatureGripStick graspstick)
+                                    {
+                                        graspstick.Deactivate();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
 
                     AbstractBehaviorParams behaviorParams = AbstractBehaviorParams.getOrAdd(self);
                     if (self.parent.PacifiedBecauseCarried || ControlledScavenger(self.parent)) behaviorParams.toldToStay = false;

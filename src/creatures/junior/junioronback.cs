@@ -347,7 +347,7 @@ namespace Scavolution
             new Hook(typeof(Player).GetProperty(nameof(Player.CanPutSpearToBack)).GetGetMethod(), PutToBackJuniorFirst);
             new Hook(typeof(Player).GetProperty(nameof(Player.CanRetrieveSlugFromBack)).GetGetMethod(), PutToBackJuniorFirst);
             new Hook(typeof(Player).GetProperty(nameof(Player.CanRetrieveSpearFromBack)).GetGetMethod(), PutToBackJuniorFirst);
-            new Hook(typeof(AbstractCreature).GetProperty(nameof(AbstractCreature.PacifiedBecauseCarried)).GetGetMethod(), ScavengerJunior_PacifiedBecauseCarried)
+            new Hook(typeof(AbstractCreature).GetProperty(nameof(AbstractCreature.PacifiedBecauseCarried)).GetGetMethod(), ScavengerJunior_PacifiedBecauseCarried);
 
             // scav on players back
             On.Player.Grabability += Player_GrababilityJunior;
@@ -999,6 +999,44 @@ namespace Scavolution
             if (!ScavengerParentTracker.map.TryGetValue(scav, out var parentTracker)) return false;
             if (scav.scared > 0.7) return true;
             if (grabber.agitation > 0.7) return true;
+            if (ScavengerJunior_AbstractWantToBeHeld((ScavengerAbstractAI)scav.creature.abstractAI, (ScavengerAbstractAI)grabber.creature.abstractAI)) return true;
+            return false;
+        }
+
+        bool ScavengerJunior_AbstractWantToBeHeld(ScavengerAbstractAI scav, ScavengerAbstractAI grabber)
+        {
+            if (ControlledScavenger(scav.parent)) return false;
+            if (grabber.GoHome()) return true;
+            if (scav.GoHome()) return false;
+
+            var currentRoom = scav.parent.Room;
+            var attraction = currentRoom.AttractionForCreature(scav.parent);
+            if (attraction == AbstractRoom.CreatureRoomAttraction.Avoid) return true;
+            if (attraction == AbstractRoom.CreatureRoomAttraction.Forbidden) return true;
+            var fearOfPredators = currentRoom.creatures
+                .Except([scav.parent, grabber.parent])
+                .Select(x => scav.parent.creatureTemplate.CreatureRelationship(x.creatureTemplate))
+                .Select(x =>
+                {
+                    if (x.type == CreatureTemplate.Relationship.Type.Pack) return x.intensity;
+                    if (x.type == CreatureTemplate.Relationship.Type.Uncomfortable) return x.intensity * 0.5;
+                    if (x.type == CreatureTemplate.Relationship.Type.SocialDependent) return x.intensity * 0.25;
+                    return 0f;
+                }).Sum();
+
+            var roomfriendlyness = currentRoom.creatures
+                .Except([scav.parent, grabber.parent])
+                .Select(x => scav.parent.creatureTemplate.CreatureRelationship(x.creatureTemplate))
+                .Select(x => x.type == CreatureTemplate.Relationship.Type.Pack? x.intensity : 0f)
+                .Sum();
+
+            var scavSanctuary = currentRoom.scavengerOutpost || currentRoom.scavengerTrader;
+            if (!(scavSanctuary && roomfriendlyness < 0.8f) || fearOfPredators > 0.5f)
+            {
+                if (AbstractRoom.CreatureAttractionToFloat(attraction) < scav.parent.personality.nervous) return true;
+                if (grabber.parent.personality.dominance > Mathf.Max(grabber.parent.personality.dominance*2, grabber.parent.personality.dominance, 0)) return true;
+            }
+            
             return false;
         }
 
