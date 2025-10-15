@@ -22,6 +22,7 @@ using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
+using BepInEx.Logging;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using RWCustom;
@@ -305,7 +306,7 @@ namespace Scavolution
         {
             orig(self, creature);
 
-            if (creature.creatureTemplate?.type == SECreatureEnums.ScavengerJunior)
+            if (creature.creatureTemplate.type == SECreatureEnums.ScavengerJunior)
             {
                 new JuniorState(self);
             }
@@ -350,9 +351,11 @@ namespace Scavolution
             {
                 if (currentParent.HasValue)
                 {
-                    text += string.Format(CultureInfo.InvariantCulture, $"<cB>{0}<cC>{1}", currentParentSaveID, currentParent.Value.ToString());
-                    text += string.Format(CultureInfo.InvariantCulture, $"<cB>{0}<cC>{1}", cyclesSinceSeenParentSaveID, cyclesSinceSeenParent.ToString());
+                    text += $"<cB>{currentParentSaveID}<cC>{currentParent.Value}";
+                    text += $"<cB>{cyclesSinceSeenParentSaveID}<cC>{cyclesSinceSeenParent}";
                 }
+
+                pubLogger?.LogDebug(text);
             }
 
             public void LoadFromString(string[] s)
@@ -360,19 +363,25 @@ namespace Scavolution
                 currentParent = null;
                 for (int i = 0; i < s.Length; i++)
                 {
-                    string text = Regex.Split(s[i], "<cC>")[0];
+                    var joarxml = Regex.Split(s[i], "<cC>");
+                    string text = joarxml[0];
                     if (text != null && text == currentParentSaveID)
                     {
-                        currentParent = int.Parse(Regex.Split(s[i], "<cC>")[1]);
+                        currentParent = int.Parse(joarxml[1]);
                         state.unrecognizedSaveStrings.Remove(currentParentSaveID);
                     }
-                    
+
                     if (text != null && text == cyclesSinceSeenParentSaveID)
                     {
-                        cyclesSinceSeenParent = int.Parse(Regex.Split(s[i], "<cC>")[1]);
+                        cyclesSinceSeenParent = int.Parse(joarxml[1]);
                         state.unrecognizedSaveStrings.Remove(cyclesSinceSeenParentSaveID);
                     }
                 }
+
+
+                ScavolutionPlugin.pubLogger?.LogDebug("junior state loaded");
+                ScavolutionPlugin.pubLogger?.LogDebug(state.creature);
+                ScavolutionPlugin.pubLogger?.LogDebug(currentParent);
             }
 
             public void CycleTick()

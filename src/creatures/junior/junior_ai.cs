@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -249,7 +250,19 @@ namespace Scavolution
             }
         }
 
-        
+        private static void Shuffle<T>(List<T> list, Func<int, int> rng)  
+        {  
+            int n = list.Count;  
+            while (n > 1) {  
+                n--;  
+                int k = rng(n + 1);  
+                T value = list[k];  
+                list[k] = list[n];  
+                list[n] = value;  
+            }  
+        }
+
+
         public void ScavengerJunior_ScavengerAbstractAI_AbstractBehavior(On.ScavengerAbstractAI.orig_AbstractBehavior orig, ScavengerAbstractAI self, int time)
         {
             orig(self, time);
@@ -259,18 +272,26 @@ namespace Scavolution
                 {
                     if (JuniorState.map.TryGetValue(self.parent.state, out var state) && self.parent.state.alive)
                     {
-                        if (!state.currentParent.HasValue && ScavengerJunior_WantToHaveParent(self))
+                        if (self.followCreature is null && ScavengerJunior_WantToHaveParent(self))
                         {
                             float current_appreciation = 0.2f;
                             AbstractCreature? bestScav = null;
-                            for (int i = 0; i < self.worldAI.scavengers.Count; i++)
+                            var scavlist = self.worldAI.scavengers.ToList();
+                            Shuffle(scavlist, (x) => UnityEngine.Random.Range(0, x));
+                            for (int i = 0; i < scavlist.Count; i++)
                             {
-                                if (self.worldAI.scavengers[i].parent.creatureTemplate.type == SECreatureEnums.ScavengerJunior) continue;
-                                float appreciation = ScavengerJunior_AppreciateParent(self, self.worldAI.scavengers[i].parent);
+                                if (ScavengerJunior_CheckParent(self, scavlist[i].parent))
+                                {
+                                    bestScav = null;
+                                    break;
+                                }
+
+                                if (scavlist[i].parent.creatureTemplate.type == SECreatureEnums.ScavengerJunior) continue;
+                                float appreciation = ScavengerJunior_AppreciateParent(self, scavlist[i].parent);
                                 if (appreciation > current_appreciation)
                                 {
                                     current_appreciation = appreciation;
-                                    bestScav = self.worldAI.scavengers[i].parent;
+                                    bestScav = scavlist[i].parent;
                                 }
                             }
 
@@ -291,7 +312,7 @@ namespace Scavolution
                         {
                             if (self.squad == null)
                             {
-                                if (!self.GoHome()) self.GoToRoom(self.followCreature.pos.room);
+                                if (!self.GoHome()) self.TryToGoToRoom(self.followCreature.pos);
                                 // if (self.followCreature.abstractAI is ScavengerAbstractAI parentAI && parentAI.squad != null)
                                 // {
                                 //     parentAI.squad.AddMember(self.parent);
@@ -350,7 +371,7 @@ namespace Scavolution
                             }
                         }
                     }
-                    
+
 
                     AbstractBehaviorParams behaviorParams = AbstractBehaviorParams.getOrAdd(self);
                     if (self.parent.PacifiedBecauseCarried || ControlledScavenger(self.parent)) behaviorParams.toldToStay = false;

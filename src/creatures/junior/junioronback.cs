@@ -1006,8 +1006,9 @@ namespace Scavolution
         bool ScavengerJunior_AbstractWantToBeHeld(ScavengerAbstractAI scav, ScavengerAbstractAI grabber)
         {
             if (ControlledScavenger(scav.parent)) return false;
-            if (grabber.GoHome()) return true;
+            // if (grabber.GoHome()) return true;
             if (scav.GoHome()) return false;
+            if (scav.parent.Room.offScreenDen) return false;
 
             var currentRoom = scav.parent.Room;
             var attraction = currentRoom.AttractionForCreature(scav.parent);
@@ -1018,7 +1019,7 @@ namespace Scavolution
                 .Select(x => scav.parent.creatureTemplate.CreatureRelationship(x.creatureTemplate))
                 .Select(x =>
                 {
-                    if (x.type == CreatureTemplate.Relationship.Type.Pack) return x.intensity;
+                    if (x.type == CreatureTemplate.Relationship.Type.Afraid) return x.intensity;
                     if (x.type == CreatureTemplate.Relationship.Type.Uncomfortable) return x.intensity * 0.5;
                     if (x.type == CreatureTemplate.Relationship.Type.SocialDependent) return x.intensity * 0.25;
                     return 0f;
@@ -1027,14 +1028,20 @@ namespace Scavolution
             var roomfriendlyness = currentRoom.creatures
                 .Except([scav.parent, grabber.parent])
                 .Select(x => scav.parent.creatureTemplate.CreatureRelationship(x.creatureTemplate))
-                .Select(x => x.type == CreatureTemplate.Relationship.Type.Pack? x.intensity : 0f)
+                .Select(x => x.type == CreatureTemplate.Relationship.Type.Pack ? x.intensity : 0f)
                 .Sum();
 
             var scavSanctuary = currentRoom.scavengerOutpost || currentRoom.scavengerTrader;
-            if (!(scavSanctuary && roomfriendlyness < 0.8f) || fearOfPredators > 0.5f)
+            Logger.LogDebug("ABSTRACT WANT TO BE HELD");
+            Logger.LogDebug(AbstractRoom.CreatureAttractionToFloat(attraction));
+            Logger.LogDebug(scavSanctuary);
+            Logger.LogDebug(roomfriendlyness);
+            Logger.LogDebug(fearOfPredators);
+            
+            if (!scavSanctuary && (roomfriendlyness < 0.8f || fearOfPredators > 0.5f))
             {
                 if (AbstractRoom.CreatureAttractionToFloat(attraction) < scav.parent.personality.nervous) return true;
-                if (grabber.parent.personality.dominance > Mathf.Max(grabber.parent.personality.dominance*2, grabber.parent.personality.dominance, 0)) return true;
+                if (grabber.parent.personality.dominance > Mathf.Max(scav.parent.personality.dominance*1.5f, scav.parent.personality.dominance, 0)) return true;
             }
             
             return false;
