@@ -26,7 +26,6 @@ namespace Scavolution
             try
             {
                 InitializeModCompatibility();
-                EvolutionTree.InitializeEvolutions();
 
                 SECreatureEnums.UnregisterEnums();
                 SECreatureEnums.RegisterEnums();
@@ -45,6 +44,8 @@ namespace Scavolution
 
                 SEScavengerAnimations.UnregisterEnums();
                 SEScavengerAnimations.RegisterEnums();
+
+                EvolutionTree.InitializeEvolutions();
                 
                 if (!Init)
                 {

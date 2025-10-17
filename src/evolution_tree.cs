@@ -115,12 +115,23 @@ namespace Scavolution
                         Watcher.WatcherEnums.CreatureTemplateType.ScavengerDisciple, Watcher.WatcherEnums.AbstractObjectType.Boomerang, 1));
                 }
             }
+            
+            // imperial
+            if (SECreatureEnums.ScavengerImperial != null)
+            {
+                list_recipes.Add(new EvolutionRecipe(DLCSharedEnums.CreatureTemplateType.ScavengerElite,
+                    SECreatureEnums.ScavengerImperial, AbstractPhysicalObject.AbstractObjectType.PebblesPearl, 1));
+                if (ModManager.MSC)
+                {
+                    list_recipes.Add(new EvolutionRecipe(DLCSharedEnums.CreatureTemplateType.ScavengerElite,
+                        Watcher.WatcherEnums.CreatureTemplateType.ScavengerDisciple, MoreSlugcats.MoreSlugcatsEnums.AbstractObjectType.MoonCloak, 1));
+                }
+            }
 
             if (ScavolutionPlugin.M4rblelousEntityPack)
             {
                 AddM4rblelousEntityPackRecipes(ref list_recipes);
             }
-            
             recipes = list_recipes.ToArray();
         }
 

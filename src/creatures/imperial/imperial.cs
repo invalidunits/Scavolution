@@ -14,7 +14,7 @@ namespace Scavolution
         void RegisterScavengerImperial()
         {
             PendulumHooks();
-            ImperialPathfindingHooks();
+            // ImperialPathfindingHooks();
             IL.ScavengerGraphics.ctor += ScavengerImperial_ScavengerGraphics_ctor;
             IL.ScavengerCosmetic.TemplarCloak.DrawSprites += ScavengerImperial_TemplarCloak_DrawSprites;
             new Hook(typeof(Scavenger).GetProperty(nameof(Scavenger.Elite)).GetGetMethod(), ScavengerImperial_Elite);
@@ -24,18 +24,47 @@ namespace Scavolution
             On.ScavengerAbstractAI.InitGearUp += ScavengerImperial_AbstractScavengerAI_InitGearUP;
             On.ScavengerAbstractAI.ReGearInDen += ScavengerImperial_AbstractScavengerAI_ReGearInDen;
             On.ScavengerAI.ctor += ScavengerImperial_ScavengerAI_ctor;
+            IL.Scavenger.FlyingWeapon += ScavengerImperial_FlyingWeapon_ctor;
+        }
+        
+        public void ScavengerImperial_FlyingWeapon_ctor(ILContext context)
+        {
+            try
+            {
+                ILCursor cursor = new ILCursor(context);
+                cursor.GotoNext(MoveType.After, x => x.MatchCallOrCallvirt<ArtificialIntelligence>(nameof(ArtificialIntelligence.VisualContact)));
+                cursor.Emit(OpCodes.Ldarg_0);
+                cursor.Emit(OpCodes.Ldarg_1);
+                cursor.EmitDelegate((bool seeweapon, Scavenger scav, Weapon weapon) =>
+                {
+                    if (scav.isImperial() && scav.room.VisualContact(scav.mainBodyChunk.pos, weapon.firstChunk.pos))
+                    {
+                        if (weapon.thrownBy is not null && scav.room.VisualContact(scav.abstractCreature.pos, weapon.thrownBy.abstractCreature.pos))
+                        {
+                            scav.AI.tracker.CreatureNoticed(weapon.thrownBy.abstractCreature);
+                        }
+                        return true;
+                    }
+
+                    return seeweapon;
+                });
+            }
+            catch (Exception except)
+            {
+                Logger.LogError(except);
+            }
         }
         
         public void ScavengerImperial_ScavengerAI_ctor(On.ScavengerAI.orig_ctor orig, ScavengerAI self, AbstractCreature creature, World world)
         {
             orig(self, creature, world);
-            if (SECreatureEnums.ScavengerImperial != null)
-            {
-                if (creature.creatureTemplate.type == SECreatureEnums.ScavengerImperial)
-                {
-                    self.AddModule(new SuperHearing(self, self.tracker, 0.5f + self.scavenger.reactionSkill*0.5f));
-                }
-            }
+            // if (SECreatureEnums.ScavengerImperial != null)
+            // {
+            //     if (creature.creatureTemplate.type == SECreatureEnums.ScavengerImperial)
+            //     {
+            //         self.AddModule(new SuperHearing(self, self.tracker, 350f * self.scavenger.reactionSkill*0.5f));
+            //     }
+            // }
             
         }
 
@@ -44,8 +73,10 @@ namespace Scavolution
             orig(self);
             if (self.isImperial())
             {
+
                 self.midRangeSkill = Mathf.Max(1.0f, self.midRangeSkill);
-                self.reactionSkill = Math.Max(0.5f, self.reactionSkill);
+                self.dodgeSkill = Mathf.Lerp(self.dodgeSkill, 1.0f, 0.7f);
+                self.reactionSkill = Mathf.Lerp(self.reactionSkill, 1.0f, 0.5f);
             }
         }
 
@@ -89,7 +120,7 @@ namespace Scavolution
 
             List<(AbstractPhysicalObject.AbstractObjectType?, float)> itemweights = [
                 ( null, 0.1f ),
-                ( AbstractPhysicalObject.AbstractObjectType.Spear, 1.8f*(1.0f + self.parent.personality.aggression)),
+                ( AbstractPhysicalObject.AbstractObjectType.Spear, 2.4f*(1.0f + self.parent.personality.aggression)),
                 // ( AbstractPhysicalObject.AbstractObjectType.ScavengerBomb, 0.3f*(1.0f + self.parent.personality.aggression)),
                 ( AbstractPhysicalObject.AbstractObjectType.Rock, 0.5f*(1.0f + self.parent.personality.dominance) ),
             ];
@@ -103,6 +134,8 @@ namespace Scavolution
 
             var state = UnityEngine.Random.state;
             float totalSum = itemweights.Select(x => x.Item2).Sum();
+            int gaurenteedSpears = 2;
+
             for (int i = 0; i < restockOBJs; i++)
             {
                 if (forbiddengrasps.Contains(i)) continue;
@@ -112,12 +145,19 @@ namespace Scavolution
                 {
 
                     value -= weight;
-                    if (ModManager.Watcher && hasGraffiti && itemtype == AbstractPhysicalObject.AbstractObjectType.GraffitiBomb) continue;
-                    if (value <= 0)
+                    var item = itemtype;
+                    if (ModManager.Watcher && hasGraffiti && item == AbstractPhysicalObject.AbstractObjectType.GraffitiBomb) continue;
+                    if (gaurenteedSpears > 0)
                     {
-                        if (itemtype == null) break;
+                        gaurenteedSpears--;
+                        item = AbstractPhysicalObject.AbstractObjectType.Spear;
+                    }
+
+                    if (value <= 0 || gaurenteedSpears > 0)
+                    {
+                        if (item == null) break;
                         AbstractPhysicalObject abstractPhysicalObject;
-                        if (itemtype == AbstractPhysicalObject.AbstractObjectType.Spear)
+                        if (item == AbstractPhysicalObject.AbstractObjectType.Spear)
                         {
                             if (UnityEngine.Random.value < 0.2f)
                             {
@@ -136,14 +176,14 @@ namespace Scavolution
                                 }
                             }
                         }
-                        else if (ModManager.Watcher && itemtype == AbstractPhysicalObject.AbstractObjectType.GraffitiBomb)
+                        else if (ModManager.Watcher && item == AbstractPhysicalObject.AbstractObjectType.GraffitiBomb)
                         {
                             hasGraffiti = true;
-                            abstractPhysicalObject = new AbstractConsumable(self.world, itemtype, null, self.parent.pos, self.world.game.GetNewID(), -1, -1, null);
+                            abstractPhysicalObject = new AbstractConsumable(self.world, item, null, self.parent.pos, self.world.game.GetNewID(), -1, -1, null);
                         }
                         else
                         {
-                            abstractPhysicalObject = new AbstractPhysicalObject(self.world, itemtype, null, self.parent.pos, self.world.game.GetNewID());
+                            abstractPhysicalObject = new AbstractPhysicalObject(self.world, item, null, self.parent.pos, self.world.game.GetNewID());
                         }
 
                         self.world.GetAbstractRoom(self.parent.pos).AddEntity(abstractPhysicalObject);

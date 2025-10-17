@@ -43,15 +43,20 @@ namespace Scavolution
 
 
                 StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.Overseer,
-                    new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Ignores, 0.0f));
+                    new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Uncomfortable, 0.2f));
                 StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.LizardTemplate,
                     new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 0.7f));
+                // StaticWorld.EstablishRelationship(CreatureTemplate.Type.LizardTemplate, SECreatureEnums.ScavengerImperial,
+                // new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Afraid, 0.7f));
                 StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.Vulture,
                     new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 0.7f));
                 StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.KingVulture,
                     new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 1.0f));
                 StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.RedLizard,
+                    new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Afraid, 0.5f));
+                StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.RedCentipede,
                     new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 1.0f));
+                
                 StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.DaddyLongLegs,
                     new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 1.0f));
                 StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.BrotherLongLegs,
@@ -144,6 +149,13 @@ namespace Scavolution
                     {
                         self.abstractAI = new ScavengerAbstractAI(self.world, self);
                         self.state = new HealthState(self);
+
+                        self.personality.aggression = Mathf.Lerp(self.personality.aggression, 1.0f, 0.5f);
+                        self.personality.dominance = Mathf.Lerp(self.personality.dominance, 1.0f, 0.8f);
+                        self.personality.nervous = Mathf.Lerp(self.personality.nervous, 0f, 0.5f);
+                        // self.personality.sympathy = Mathf.Lerp(self.personality.sympathy, 1.0f, 0.8f);
+                        self.personality.energy = Mathf.Max(0.7f, self.personality.energy);
+                        self.personality.bravery = 1.0f;
                     }
                 }
             }
@@ -235,7 +247,7 @@ namespace Scavolution
                 ScavengerImperialTemplate.instantDeathDamageLimit = 3.0f;
 
                 ScavengerImperialTemplate.offScreenSpeed = 1.25f;
-                ScavengerImperialTemplate.grasps = 4;
+                ScavengerImperialTemplate.grasps = 6;
                 ScavengerImperialTemplate.AI = true;
                 ScavengerImperialTemplate.requireAImap = true;
                 ScavengerImperialTemplate.abstractedLaziness = 50;
