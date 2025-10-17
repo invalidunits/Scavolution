@@ -798,7 +798,7 @@ namespace Scavolution
                     {
                         // lock in
                         self.agitation = Mathf.Max(self.agitation, (holdingkid == CreatureHoldingJunior.HoldingMYKid) ? 1.0f : 0.5f);
-                        self.scared = Mathf.Min(self.agitation, (holdingkid == CreatureHoldingJunior.HoldingMYKid) ? 0f : 0.25f);
+                        self.scared = Mathf.Min(self.scared, (holdingkid == CreatureHoldingJunior.HoldingMYKid) ? 0f : 0.25f);
                         self.bloodLust = 25;
 
                         self.focusCreature = self.tracker.RepresentationForCreature(critter.abstractCreature, true);
