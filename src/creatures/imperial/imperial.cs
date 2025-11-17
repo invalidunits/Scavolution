@@ -179,7 +179,7 @@ namespace Scavolution
                         else if (ModManager.Watcher && item == AbstractPhysicalObject.AbstractObjectType.GraffitiBomb)
                         {
                             hasGraffiti = true;
-                            abstractPhysicalObject = new AbstractConsumable(self.world, item, null, self.parent.pos, self.world.game.GetNewID(), -1, -1, null);
+                            abstractPhysicalObject = new GraffitiBomb.AbstractGraffitiBomb(self.world, null, self.parent.pos, self.world.game.GetNewID(), -1, -1, null);
                         }
                         else
                         {
@@ -258,6 +258,29 @@ namespace Scavolution
                         self.AddSubModule(self.cloak);
                         spriteCount += self.cloak.totalSprites;
                     }
+                });
+
+                cursor.GotoNext(MoveType.Before,
+                    x => x.MatchLdarg(0),
+                    x => x.MatchLdloc(1),
+                    x => x.MatchDup(),
+                    x => x.MatchLdcI4(1),
+                    x => x.MatchAdd(),
+                    x => x.MatchStloc(1),
+                    x => x.MatchStfld<ScavengerGraphics>("<HeadSprite>k__BackingField")
+                );
+
+                cursor.Emit(OpCodes.Ldarg_0);
+                cursor.Emit(OpCodes.Ldloca, 1);
+                cursor.EmitDelegate((ScavengerGraphics self, ref int spritenum) =>
+                {
+                    if (self.scavenger.isImperial())
+                    {
+                        var scarf = new JuniorScarf(self, spritenum, true);
+                        self.AddSubModule(scarf);
+                        spritenum += scarf.totalSprites;
+                    }
+
                 });
             }
             catch (Exception except)

@@ -562,29 +562,14 @@ namespace Scavolution
                     var creature = self.AI.tracker.GetRep(creatureTrackedIndex)?.representedCreature?.realizedCreature;
                     if (creature is not null)
                     {
-                        if (JuniorOnBack.onback_map.TryGetValue(self, out var onback) && onback.owner == creature)
-                        {
-                            return false;
-                        }
-
                         if (creature is Scavenger otherscav)
                         {
-                            if (self.GetJuniorOnBack().scavenger == otherscav)
+                            if (JuniorOnBack.onback_map.TryGetValue(otherscav, out var onback1) && onback1.owner == self)
                             {
                                 return false;
                             }
 
-                            if (self.grasps.Any(x => x?.grabbed == otherscav))
-                            {
-                                return false;
-                            }
-
-                            if (JuniorOnBack.onback_map.TryGetValue(otherscav, out _))
-                            {
-                                return false;
-                            }
-
-                            if (otherscav.isJunior() && otherscav.grabbedBy.Any())
+                            if (JuniorOnBack.onback_map.TryGetValue(self, out var onback2) && onback1.owner == otherscav)
                             {
                                 return false;
                             }
@@ -667,29 +652,14 @@ namespace Scavolution
             {
                 if (obj is Scavenger scav)
                 {
-                    if (JuniorOnBack.onback_map.TryGetValue(scav, out var onback) && onback.owner == self.thrownBy)
-                    {
-                        return false;
-                    }
-
                     if (self.thrownBy is Scavenger scavthrower)
                     {
-                        if (scavthrower.GetJuniorOnBack().scavenger == scav)
+                        if (JuniorOnBack.onback_map.TryGetValue(scav, out var onback1) && onback1.owner == scavthrower)
                         {
                             return false;
                         }
 
-                        if (scavthrower.grasps.Any(x => x?.grabbed == scav))
-                        {
-                            return false;
-                        }
-
-                        if (JuniorOnBack.onback_map.TryGetValue(scav, out _))
-                        {
-                            return false;
-                        }
-
-                        if (scav.isJunior() && scav.grabbedBy.Any())
+                        if (JuniorOnBack.onback_map.TryGetValue(scavthrower, out var onback2) && onback1.owner == scav)
                         {
                             return false;
                         }
@@ -716,13 +686,15 @@ namespace Scavolution
                     var onback = self.GetJuniorOnBack();
                     foreach (Creature.Grasp grasp in self.grasps.Where(x => x is not null))
                     {
+                        
                         if (grasp.grabbed is Scavenger scav)
                         {
-                            if (ParentalParams.getOrAdd(scav.AI).wantCarryTimer <= 0 || scav.AI.giftForMe != null)
+                            bool validtoDrop = ScavengerJunior_IsValidDrop(scav.AI, self.AI);
+                            if (validtoDrop && (ParentalParams.getOrAdd(scav.AI).wantCarryTimer <= 0 || scav.AI.giftForMe != null))
                             {
                                 grasp.Release();
                             }
-                            else if (ParentalParams.getOrAdd(scav.AI).wantCarryTimer > 100)
+                            else if (validtoDrop || ParentalParams.getOrAdd(scav.AI).wantCarryTimer > 100)
                             {
                                 if (onback.scavenger == null && !injured)
                                 {
@@ -736,14 +708,18 @@ namespace Scavolution
 
                     if (onback.scavenger is not null)
                     {
-                        if (ParentalParams.getOrAdd(onback.scavenger.AI).wantCarryTimer <= 100 || injured)
+                        bool validtoDrop = ScavengerJunior_IsValidDrop(onback.scavenger.AI, self.AI);
+                        if (validtoDrop)
                         {
-                            onback.increment = true;
-                        }
+                            if (ParentalParams.getOrAdd(onback.scavenger.AI).wantCarryTimer <= 100 || injured)
+                            {
+                                onback.increment = true;
+                            }
 
-                        if (onback.scavenger.AI.giftForMe != null)
-                        {
-                            onback.Throw(eu);
+                            if (onback.scavenger.AI.giftForMe != null)
+                            {
+                                onback.Throw(eu);
+                            }
                         }
                     }
 
@@ -994,13 +970,32 @@ namespace Scavolution
                 ParentalParams.getOrAdd(scav).wantCarryTimer = 0;
                 return false;
             }
+            if (grabber.scavenger.Injured > 0f) return false;
             if ((scav.creature.abstractAI as ScavengerAbstractAI)!.GoHome()) return false;
             if (ControlledScavenger(scav.creature)) return false;
             if (!ScavengerParentTracker.map.TryGetValue(scav, out var parentTracker)) return false;
             if (scav.scared > 0.7) return true;
             if (grabber.agitation > 0.7) return true;
+            if (parentTracker.unreachableCounter > 20) return true;
             if (ScavengerJunior_AbstractWantToBeHeld((ScavengerAbstractAI)scav.creature.abstractAI, (ScavengerAbstractAI)grabber.creature.abstractAI)) return true;
             return false;
+        }
+        
+        bool ScavengerJunior_IsValidDrop(ScavengerAI scav, ScavengerAI grabber)
+        {
+            if (!scav.scavenger.room.aimap.TileAccessibleToCreature(grabber.creature.pos.x, grabber.creature.pos.y, scav.creature.creatureTemplate))
+            {
+                // please don't drop me into a pit
+                return false;
+            }
+
+            if (scav.scavenger.room.aimap.getAItile(grabber.creature.pos).floorAltitude > 2)
+            {
+                // please drop me on the ground
+                return false;
+            }
+            
+            return true;
         }
 
         bool ScavengerJunior_AbstractWantToBeHeld(ScavengerAbstractAI scav, ScavengerAbstractAI grabber)

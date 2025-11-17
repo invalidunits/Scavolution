@@ -594,7 +594,12 @@ namespace Scavolution
                                 {
                                     // Make scav dad into pick me up
                                     scavdad.AI.scavengeCandidate = scavdad.AI.itemTracker.RepresentationForObject(self.scavenger, AddIfMissing: true);
-                                    parent.abstractAI.SetDestination(self.scavenger.room.GetWorldCoordinate(self.scavenger.firstChunk.pos));
+
+                                    if (SECreatureEnums.ScavengerImperial is null || scavdad.Template.type != SECreatureEnums.ScavengerImperial)
+                                    {
+                                        parent.abstractAI.SetDestination(self.scavenger.room.GetWorldCoordinate(self.scavenger.firstChunk.pos));
+                                    }
+                                    
                                 }
                             }
                             else
@@ -1153,6 +1158,11 @@ namespace Scavolution
                 {
                     return 0f;
                 }
+
+                if (!AI.pathFinder.CoordinateReachable(abstractParent.pos))
+                {
+                    return 0f; // don't just stand there...
+                }
                     
                 return Custom.LerpMap(dist, DynamicDesiredCloseness(), DynamicDesiredCloseness() * 3f, 0.2f, 1f) * Urgency; ;
             }
@@ -1226,11 +1236,21 @@ namespace Scavolution
                 {
                     parentMovingCounter--;
                 }
+
+                if (!AI.pathFinder.CoordinateReachable(abstractParent.pos))
+                {
+                    unreachableCounter += 1;
+                }
+                else
+                {
+                    unreachableCounter = Math.Max(unreachableCounter - 1, 0);
+                }
             }
 
             public AbstractCreature? abstractParent => this.AI.creature.abstractAI.followCreature;
             public WorldCoordinate? lastParentPos;
             public int parentMovingCounter = 0;
+            public int unreachableCounter = 0;
         }
 
 

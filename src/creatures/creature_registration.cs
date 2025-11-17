@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Mono.Cecil.Cil;
@@ -174,12 +175,12 @@ namespace Scavolution
             orig();
 
             Logger.LogDebug("Initializing Scavenger Junior");
-            List<TileTypeResistance> tile_resistance = new List<TileTypeResistance>();
-            List<TileConnectionResistance> tile_connection_resistance = new List<TileConnectionResistance>();
+            List<TileTypeResistance> junior_tile_resistance = new List<TileTypeResistance>();
+            List<TileConnectionResistance> junior_tile_connection_resistance = new List<TileConnectionResistance>();
             ScavengerJuniorTemplate = new CreatureTemplate(SECreatureEnums.ScavengerJunior,
                 StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.Scavenger),
-                tile_resistance,
-                tile_connection_resistance,
+                junior_tile_resistance,
+                junior_tile_connection_resistance,
                 new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Uncomfortable, 0.4f)
             );
             ScavengerJuniorTemplate.BlizzardWanderer = false;
@@ -232,16 +233,19 @@ namespace Scavolution
             if (SECreatureEnums.ScavengerImperial != null)
             {
                 Logger.LogDebug("Initializing Scavenger Imperial");
+                List<TileTypeResistance> imperial_tile_resistance = new List<TileTypeResistance>();
+                List<TileConnectionResistance> imperial_tile_connection_resistance = new List<TileConnectionResistance>();
+                // imperial_tile_resistance.Add(new TileTypeResistance(AItile.Accessibility.Air, 1f, PathCost.Legality.Allowed));
+
                 ScavengerImperialTemplate = new CreatureTemplate(SECreatureEnums.ScavengerImperial,
                     StaticWorld.GetCreatureTemplate(CreatureTemplate.Type.Scavenger),
-                    tile_resistance,
-                    tile_connection_resistance,
+                    imperial_tile_resistance,
+                    imperial_tile_connection_resistance,
                     new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Ignores, 0.1f)
                 );
 
-
                 ScavengerImperialTemplate.BlizzardWanderer = true;
-                ScavengerImperialTemplate.BlizzardAdapted = true;
+                ScavengerImperialTemplate.BlizzardAdapted = false;
                 ScavengerImperialTemplate.baseDamageResistance = 3.0f;
                 ScavengerImperialTemplate.baseStunResistance = 1.5f;
                 ScavengerImperialTemplate.instantDeathDamageLimit = 3.0f;

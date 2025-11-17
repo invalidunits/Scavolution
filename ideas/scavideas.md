@@ -1,5 +1,5 @@
 ### Possible Scavenger varients. (These are not in the Please wait for these)
-#### Scavenger Junior (Not in the game yet)
+#### Scavenger Junior
 A scavenger in training.
 - Weak
 - Can ride on your and scavengers backs.
@@ -14,9 +14,9 @@ A strong scavenger with long braids and a pale brown cape.
 - Carries a special **Flag Spear**
 - May Spawn with Scavenger Junior on it's back
 
-#### Scavenger Imperial (Not in the game yet)
+#### Scavenger Imperial 
 A patient scavenger who seeks to rule the sky and is constantly improving it's craft. 
-- Lubricated Armour protects it from lizard bites, wormgrass,and the Rot.
+<!-- - Lubricated Armour protects it from lizard bites, wormgrass,and the Rot.  -->
 - Grapples enemies using Grappling hooks, similar to Strawberry lizards
 - Grappling hooks slice and kill Daddy longlegs with ease.
 - Swings from ceilings using Grappling hooks.

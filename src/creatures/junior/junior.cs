@@ -268,7 +268,7 @@ namespace Scavolution
                         }
                         else if (itemtype == AbstractPhysicalObject.AbstractObjectType.GraffitiBomb)
                         {
-                            abstractPhysicalObject = new AbstractConsumable(self.world, itemtype, null, self.parent.pos, self.world.game.GetNewID(), -1, -1, null);
+                            abstractPhysicalObject = new GraffitiBomb.AbstractGraffitiBomb(self.world, null, self.parent.pos, self.world.game.GetNewID(), -1, -1, null);
                         }
                         else
                         {
