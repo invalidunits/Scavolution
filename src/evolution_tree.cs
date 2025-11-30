@@ -10,15 +10,30 @@ namespace Scavolution
     {
         public CreatureTemplate.Type starts_as;
         public CreatureTemplate.Type ends_as;
-        public AbstractPhysicalObject.AbstractObjectType item_required;
+        public AbstractPhysicalObject.AbstractObjectType? item_required;
+        public Func<AbstractPhysicalObject, bool>? item_delegate;
+
+        public uint priority = 0;
         public uint max_juniors_spawned;
 
         public EvolutionRecipe(CreatureTemplate.Type starts_as, CreatureTemplate.Type ends_as,
-            AbstractPhysicalObject.AbstractObjectType item_required, uint max_juniors_spawned = 0)
+            AbstractPhysicalObject.AbstractObjectType? item_required, uint priority, uint max_juniors_spawned = 1)
         {
             this.starts_as = starts_as;
             this.ends_as = ends_as;
+            this.priority = priority;
             this.item_required = item_required;
+            this.item_required = item_required;
+            this.max_juniors_spawned = max_juniors_spawned;
+        }
+
+        public EvolutionRecipe(CreatureTemplate.Type starts_as, CreatureTemplate.Type ends_as,
+            Func<AbstractPhysicalObject, bool>? item_delegate, uint priority, uint max_juniors_spawned = 1)
+        {
+            this.starts_as = starts_as;
+            this.ends_as = ends_as;
+            this.priority = priority;
+            this.item_delegate = item_delegate;
             this.max_juniors_spawned = max_juniors_spawned;
         }
     }
@@ -27,7 +42,7 @@ namespace Scavolution
     {
         static public EvolutionRecipe[]? recipes = null;
 
-        static public bool TryGetEvolution(this CreatureTemplate.Type type, AbstractPhysicalObject.AbstractObjectType item, out EvolutionRecipe? evolution)
+        static public bool TryGetEvolution(this CreatureTemplate.Type type, AbstractPhysicalObject item, out EvolutionRecipe? evolution)
         {
             evolution = null;
             if (recipes != null)
@@ -37,10 +52,24 @@ namespace Scavolution
                     ref EvolutionRecipe recipe = ref recipes[i];
                     if (recipe.starts_as.index != type.index) continue;
                     if (recipe.ends_as.index == type.index) continue;
-                    if (recipe.item_required.index != item.index) continue;
-                    evolution = recipe;
-                    return true;
+                    if (recipe.item_required != null)
+                    {
+                        if (recipe.item_required.index != item.type.index) continue;
+                    }
+
+                    if (recipe.item_delegate != null)
+                    {
+                        if (!recipe.item_delegate(item)) continue;
+                    }
+
+                    if (ScavolutionPlugin.cant_evolve_with.TryGetValue(item, out _)) continue;                    
+                    if (!evolution.HasValue || evolution.Value.priority < recipe.priority)
+                    {
+                        evolution = recipe;
+                    }
                 }
+
+                return evolution != null;
             }
             return false;
         }
@@ -82,7 +111,7 @@ namespace Scavolution
             return false;
         }
 
-        static public bool TryGetEvolution(this AbstractCreature creature, AbstractPhysicalObject.AbstractObjectType item, out EvolutionRecipe? evolution) => TryGetEvolution(creature.creatureTemplate.type, item, out evolution);
+        static public bool TryGetEvolution(this AbstractCreature creature, AbstractPhysicalObject item, out EvolutionRecipe? evolution) => TryGetEvolution(creature.creatureTemplate.type, item, out evolution);
 
 
         static public void InitializeEvolutions()
@@ -124,8 +153,15 @@ namespace Scavolution
                 if (ModManager.MSC)
                 {
                     list_recipes.Add(new EvolutionRecipe(DLCSharedEnums.CreatureTemplateType.ScavengerElite,
-                        Watcher.WatcherEnums.CreatureTemplateType.ScavengerDisciple, MoreSlugcats.MoreSlugcatsEnums.AbstractObjectType.MoonCloak, 1));
+                        SECreatureEnums.ScavengerImperial, MoreSlugcats.MoreSlugcatsEnums.AbstractObjectType.MoonCloak, 1));
                 }
+
+                list_recipes.Add(new EvolutionRecipe(DLCSharedEnums.CreatureTemplateType.ScavengerElite,
+                    SECreatureEnums.ScavengerImperial, (AbstractPhysicalObject obj) =>
+                    {
+                        return obj is VultureMask.AbstractVultureMask mask && mask.king;
+                    }, 1));
+                
             }
 
             if (ScavolutionPlugin.M4rblelousEntityPack)

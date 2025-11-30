@@ -13,22 +13,27 @@ namespace Scavolution
             IL.WorldLoader.GeneratePopulation += WorldLoader_GeneratePopulation;
 
             juniorSpawnChance.Clear();
-            juniorSpawnChance.Add(SlugcatStats.Name.White, 0.2f);
-            juniorSpawnChance.Add(SlugcatStats.Name.Yellow, 0.3f);
-            juniorSpawnChance.Add(SlugcatStats.Name.Red, 0.05f);
+            juniorSpawnChance.Add(SlugcatStats.Timeline.White, 0.2f);
+            juniorSpawnChance.Add(SlugcatStats.Timeline.Yellow, 0.3f);
+            juniorSpawnChance.Add(SlugcatStats.Timeline.Red, 0.05f);
 
             if (ModManager.MSC)
             {
-                juniorSpawnChance.Add(MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Gourmand, 0.3f);
-                juniorSpawnChance.Add(MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Artificer, 0.01f);
-                juniorSpawnChance.Add(MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Rivulet, 0.1f);
-                juniorSpawnChance.Add(MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Spear, 0.01f);
-                juniorSpawnChance.Add(MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Saint, 0.3f);
+                juniorSpawnChance.Add(SlugcatStats.Timeline.Gourmand, 0.3f);
+                juniorSpawnChance.Add(SlugcatStats.Timeline.Artificer, 0.01f);
+                juniorSpawnChance.Add(SlugcatStats.Timeline.Rivulet, 0.1f);
+                juniorSpawnChance.Add(SlugcatStats.Timeline.Spear, 0.01f);
+                juniorSpawnChance.Add(SlugcatStats.Timeline.Saint, 0.3f);
+            }
+
+            if (ModManager.Watcher)
+            {
+                juniorSpawnChance.Add(SlugcatStats.Timeline.Watcher, 0.3f);
             }
 
         }
 
-        public static Dictionary<SlugcatStats.Name, float> juniorSpawnChance = new();
+        public static Dictionary<SlugcatStats.Timeline, float> juniorSpawnChance = new();
 
         public void WorldLoader_GeneratePopulation(ILContext context)
         {
@@ -47,7 +52,7 @@ namespace Scavolution
                     {
                         if (!loader.game.IsStorySession) return;
                         if (spawnedCreature.creatureTemplate.TopAncestor().type == CreatureTemplate.Type.Scavenger &&
-                            spawnedCreature.creatureTemplate.TopAncestor().type != SECreatureEnums.ScavengerJunior &&
+                            spawnedCreature.creatureTemplate.type != SECreatureEnums.ScavengerJunior &&
                             fresh && options.JuniorsSpawnNaturally.Value)
                         {
                             UnityEngine.Random.State state = UnityEngine.Random.state;
@@ -56,7 +61,7 @@ namespace Scavolution
                                 UnityEngine.Random.InitState(spawnedCreature.ID.RandomSeed);
 
                                 float spawnChance;
-                                if (!juniorSpawnChance.TryGetValue(loader.game.StoryCharacter, out spawnChance)) spawnChance = 0.1f;
+                                if (!juniorSpawnChance.TryGetValue(loader.game.TimelinePoint, out spawnChance)) spawnChance = 0.1f;
 
                                 if (UnityEngine.Random.value < spawnChance)
                                 {

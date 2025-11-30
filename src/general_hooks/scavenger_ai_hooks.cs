@@ -1,9 +1,13 @@
 
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using HUD;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
+using UnityEngine;
 
 namespace Scavolution
 {
@@ -19,6 +23,37 @@ namespace Scavolution
             IL.ScavengerAI.DecideBehavior += ScavengerAI_DecideBehavior;
             On.ScavengerAI.CollectScore_PhysicalObject_bool += ScavengerAI_CollectScore;
             On.ScavengerAI.RecognizeCreatureAcceptingGift += ScavengerAI_RecognizeCreatureAcceptingGift;
+
+            On.ScavengerAbstractAI.InitGearUp += Scavenger_AbstractScavengerAI_InitGearUP;
+            On.ScavengerAbstractAI.ReGearInDen += Scavenger_AbstractScavengerAI_ReGearInDen;
+        }
+
+        void Scavenger_AbstractScavengerAI_InitGearUP(On.ScavengerAbstractAI.orig_InitGearUp orig, ScavengerAbstractAI self)
+        {
+            SetNewGearAsUnevolvable(() => orig(self), self.parent);
+        }
+
+        void Scavenger_AbstractScavengerAI_ReGearInDen(On.ScavengerAbstractAI.orig_ReGearInDen orig, ScavengerAbstractAI self)
+        {
+            SetNewGearAsUnevolvable(() => orig(self), self.parent);
+        }
+
+
+        public sealed class EmptyPlaceholder {}
+        public static ConditionalWeakTable<AbstractPhysicalObject, EmptyPlaceholder> cant_evolve_with = new(); // hack
+
+        // don't evolve with gear you took from the stronghold! >:(
+        public void SetNewGearAsUnevolvable(Action makeNewGear, AbstractCreature scavenger)
+        {
+            var currentGear = scavenger.stuckObjects.Where(x => x is AbstractPhysicalObject.CreatureGripStick stick && stick.A == scavenger && stick.B != null);
+            makeNewGear();
+            var allGear = scavenger.stuckObjects.Where(x => x is AbstractPhysicalObject.CreatureGripStick stick && stick.A == scavenger && stick.B != null);
+            var newGear = allGear.Except(currentGear);
+
+            foreach (AbstractPhysicalObject.AbstractObjectStick stick in newGear)
+            {
+                cant_evolve_with.Add(stick.B, new EmptyPlaceholder());
+            }
         }
 
         public bool ScavengerAbstractAI_GoHome(On.ScavengerAbstractAI.orig_GoHome orig, ScavengerAbstractAI self)
@@ -79,13 +114,14 @@ namespace Scavolution
 
         public int ScavengerAI_CollectScore(On.ScavengerAI.orig_CollectScore_PhysicalObject_bool orig, global::ScavengerAI self, PhysicalObject obj, bool weaponFiltered)
         {
+            int value = orig(self, obj, weaponFiltered);
             try
             {
                 if (!weaponFiltered)
                 {
-                    if (EvolutionTree.TryGetEvolution(self.creature, obj.abstractPhysicalObject.type, out var evolution))
+                    if (EvolutionTree.TryGetEvolution(self.creature, obj.abstractPhysicalObject, out var evolution))
                     {
-                        return 7;
+                        return Mathf.Max(value, 7);
                     }
                 }
 
@@ -95,7 +131,7 @@ namespace Scavolution
                 Logger.LogError(except);
             }
 
-            return orig(self, obj, weaponFiltered);
+            return value;
         }
 
         public bool ScavengerAbstractAI_ReadyToJoinSquad(On.ScavengerAbstractAI.orig_ReadyToJoinSquad orig, global::ScavengerAbstractAI self)
@@ -215,7 +251,7 @@ namespace Scavolution
                 {
                     return;
                 }
-                if (EvolutionTree.TryGetEvolution(self.creature, item.abstractPhysicalObject.type, out var evolution))
+                if (EvolutionTree.TryGetEvolution(self.creature, item.abstractPhysicalObject, out var evolution))
                 {
                     var evolutionTracker = ((ScavengerAbstractAI)self.creature.abstractAI).GetEvolutionTracker();
                     evolutionTracker.evolutionHelpers.Add(new WeakReference<AbstractPhysicalObject>(item.abstractPhysicalObject), subRep.representedCreature.ID);

@@ -26,6 +26,7 @@ using BepInEx.Logging;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using RWCustom;
+using SprobDesecratingGraves;
 using UnityEngine;
 
 namespace Scavolution
@@ -355,7 +356,7 @@ namespace Scavolution
                     text += $"<cB>{cyclesSinceSeenParentSaveID}<cC>{cyclesSinceSeenParent}";
                 }
 
-                pubLogger?.LogDebug(text);
+                // pubLogger?.LogDebug(text);
             }
 
             public void LoadFromString(string[] s)
@@ -571,7 +572,18 @@ namespace Scavolution
     {
         static public bool isJunior(this Scavenger scav)
         {
+            if (ScavolutionPlugin.NotSlugcatPlayables)
+            {
+                if (isJunior_NSP(scav)) return true;
+            }
+
             return scav.abstractCreature.creatureTemplate.type == SECreatureEnums.ScavengerJunior;
+        }
+
+        static private bool isJunior_NSP(Scavenger scav)
+        {
+            var data = scav.abstractCreature.GetScavengerData();
+            return data?.controller is not null && data.controller.SlugCatClass == ScavolutionPlugin.PlayerJunior;
         }
     }
 }

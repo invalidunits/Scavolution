@@ -32,6 +32,28 @@ namespace Scavolution
             On.CreatureSymbol.SpriteNameOfCreature += ScavengerJunior_CreatureSymbol_SpriteNameOfCreature;
             On.CreatureSymbol.ColorOfCreature += ScavengerJunior_CreatureSymbol_ColorOfCreature;
             On.MultiplayerUnlocks.SandboxItemUnlocked += ScavengerJunior_MultiplayerUnlocks_SandboxItemUnlocked;
+            On.WorldLoader.CreatureTypeFromString += WorldLoader_CreatureTypeFromString;
+        }
+
+        CreatureTemplate.Type WorldLoader_CreatureTypeFromString(On.WorldLoader.orig_CreatureTypeFromString orig, string s)
+        {
+            if (s == "scavenger imperial" || s == "scavimperial")
+            {
+                if (SECreatureEnums.ScavengerImperial != null)
+                {
+                    return SECreatureEnums.ScavengerImperial;
+                }
+            }
+
+            if (s == "scavenger junior" || s == "scavjunior")
+            {
+                if (SECreatureEnums.ScavengerJunior != null)
+                {
+                    return SECreatureEnums.ScavengerJunior;
+                }
+            }
+
+            return orig(s);
         }
 
 
@@ -43,37 +65,41 @@ namespace Scavolution
                 StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerJunior, CreatureTemplate.Type.Overseer, new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Uncomfortable, 0.5f));
 
 
-                StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.Overseer,
-                    new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Uncomfortable, 0.2f));
-                StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.LizardTemplate,
-                    new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 0.7f));
-                // StaticWorld.EstablishRelationship(CreatureTemplate.Type.LizardTemplate, SECreatureEnums.ScavengerImperial,
-                // new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Afraid, 0.7f));
-                StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.Vulture,
-                    new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 0.7f));
-                StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.KingVulture,
-                    new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 1.0f));
-                StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.RedLizard,
-                    new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Afraid, 0.5f));
-                StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.RedCentipede,
-                    new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 1.0f));
-                
-                StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.DaddyLongLegs,
-                    new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 1.0f));
-                StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.BrotherLongLegs,
-                    new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 1.0f));
+                if (SECreatureEnums.ScavengerImperial != null)
+                {
+                    StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.Overseer,
+                        new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Uncomfortable, 0.2f));
+                    StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.LizardTemplate,
+                        new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 0.7f));
+                    // StaticWorld.EstablishRelationship(CreatureTemplate.Type.LizardTemplate, SECreatureEnums.ScavengerImperial,
+                    // new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Afraid, 0.7f));
+                    StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.Vulture,
+                        new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 0.7f));
+                    StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.KingVulture,
+                        new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 1.0f));
+                    StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.RedLizard,
+                        new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Afraid, 0.5f));
+                    StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.RedCentipede,
+                        new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 1.0f));
+                    
+                    StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.DaddyLongLegs,
+                        new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 1.0f));
+                    StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.BrotherLongLegs,
+                        new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 1.0f));
 
-                if (ModManager.DLCShared)
-                {
-                    StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, DLCSharedEnums.CreatureTemplateType.MirosVulture,
-                        new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 1.0f));
+                    if (ModManager.DLCShared)
+                    {
+                        StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, DLCSharedEnums.CreatureTemplateType.MirosVulture,
+                            new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 1.0f));
+                    }
+                    
+                    if (ModManager.MSC)
+                    {
+                        StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, MoreSlugcats.MoreSlugcatsEnums.CreatureTemplateType.TrainLizard,
+                            new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 1.0f));
+                    }
                 }
                 
-                if (ModManager.MSC)
-                {
-                    StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, MoreSlugcats.MoreSlugcatsEnums.CreatureTemplateType.TrainLizard,
-                        new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 1.0f));
-                }
                 
             }
             catch (Exception except)

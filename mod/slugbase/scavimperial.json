@@ -1,0 +1,39 @@
+{
+	"id": "PlayerImperial",
+	"name": "The Imperial",
+	"description": "A master of it's craft. A symbol of it's Species.<LINE>It's pendulum brings the power to change our world.",
+	"features": {
+		"color": "753939",
+		"auto_grab_batflies": false,
+		"loudness": [2, 1.75],
+		"world_state": [ "Spear" ],
+		"timeline_after": [ "Spear" ],
+		"food_min": 7,
+		"food_max": 10,
+		"karma": 9,
+		"karma_cap": 9,
+		"weight": 1.85,
+		"lung_capacity": [200.0, 1.5],
+		"expedition_description": "The trial awaits, It's wind swings our world's pendulum.",
+		"the_mark": false,
+		"alignments": {
+			"Scavengers": { "like": 1 },
+			"Lizards": { "like": -1 }
+		},
+		"custom_colors": [
+			{ "name": "Body", "story": "1E1B18", "arena": [ "7A7A7A", "7A7200", "7A2F34", "00207A" ] },
+			{ "name": "Eyes", "story": "994030", "arena": [ "FFFFFF", "FFEE00", "FF636D", "0043FF" ] },
+			{ "name": "Head", "story": "14100D", "arena": [ "160E07", "160E07", "160E07", "160E07" ] },
+			{ "name": "Chest Patch", "story": "352C25", "arena": [ "7A7A7A", "7A7200", "7A2F34", "00207A" ] },
+			{ "name": "Decoration", "story": "514337", "arena": [ "FFFFFF", "FFEE00", "FF636D", "0043FF" ] }
+		],
+		"start_room": "HI_A04",		
+		"select_menu_scene": "Sprob_Slugcat_PlayerScav",
+		"select_menu_scene_ascended": "Ghost_Prototype",
+		"diet": {
+			"corpses": 1,
+			"meat": 1,
+			"plants": 1
+		}
+	}
+}

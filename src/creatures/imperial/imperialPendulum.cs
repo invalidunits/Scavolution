@@ -36,6 +36,11 @@ namespace Scavolution
 
             public Vector2 GetBestFlailDir()
             {
+                if (ScavolutionPlugin.ControlledScavenger(scavenger.abstractCreature) && myPendulum is not null)
+                {
+                    return (Vector2)Futile.mousePosition + scavenger.room.game.cameras[0].pos - myPendulum.RestPosition;
+                }
+
                 if (scavenger.AI.preyTracker.currentPrey is PreyTracker.TrackedPrey prey)
                 {
                     var bestpos = prey.critRep.BestGuessForPosition();
@@ -56,7 +61,13 @@ namespace Scavolution
 
                 timeLeft -= 1;
 
-                if (Mathf.Max(scavenger.AI.preyTracker.Utility(), scavenger.AI.threatTracker.Utility()) < 0.15f || timeLeft <= -20)
+                bool slowdown = Mathf.Max(scavenger.AI.preyTracker.Utility(), scavenger.AI.threatTracker.Utility()) < 0.15f || timeLeft <= -20;
+                if (ScavolutionPlugin.ControlledScavenger(scavenger.abstractCreature))
+                {
+                    slowdown = !(scavenger.inputWithoutDiagonals.HasValue && scavenger.inputWithoutDiagonals.Value.spec);
+                }
+                
+                if (slowdown)
                 {
                     ++slowingDown;
                     if (slowingDown > 40 && myPendulum.mode == PendulumMode.Flail)
@@ -82,6 +93,13 @@ namespace Scavolution
             public void ThrowCheck()
             {
                 if (myPendulum is null) return;
+
+                if (ScavolutionPlugin.ControlledScavenger(scavenger.abstractCreature))
+                {
+                    myPendulum.Send(((Vector2)Futile.mousePosition + scavenger.room.game.cameras[0].pos - myPendulum.RestPosition) * 1.2f, true, 1.0f, false, false);
+                    return;
+                }
+
                 float power = 1.0f - 0.7f*Mathf.Sqrt(Mathf.Clamp01(timeLeft / 160f));
                 var focusCreature = scavenger.AI.focusCreature;
                 if (focusCreature is null) return;
@@ -203,6 +221,12 @@ namespace Scavolution
             {
                 if (mode == PendulumMode.Attached)
                 {
+                    if (this.stuckInAppendage is not null)
+                    {
+                        var appendage = this.stuckInAppendage.appendage;
+                        return Vector2.Lerp(appendage.segments[stuckInAppendage.prevSegment], appendage.segments[stuckInAppendage.prevSegment + 1], stuckInAppendage.distanceToNext);
+                    }
+
                     if (this.stuckInObject is not null)
                     {
                         var chunk = this.stuckInObject.bodyChunks[this.stuckInChunkIndex];
@@ -232,12 +256,17 @@ namespace Scavolution
             {
                 if (mode == PendulumMode.Attached)
                 {
+                    if (this.stuckInAppendage is not null)
+                    {
+                        var appendage = this.stuckInAppendage.appendage;
+                        return Vector2.Lerp(appendage.segments[stuckInAppendage.prevSegment], appendage.segments[stuckInAppendage.prevSegment + 1], stuckInAppendage.distanceToNext);;
+                    }
+                    
                     if (this.stuckInObject is not null)
                     {
                         var chunk = this.stuckInObject.bodyChunks[this.stuckInChunkIndex];
                         return chunk.pos + -rotation.normalized * chunk.rad;
                     }
-
                     return absoluteAttachedPosition;
                 }
 
@@ -291,15 +320,20 @@ namespace Scavolution
 
         public int ticksSinceModeChange = 0;
         public PhysicalObject? stuckInObject = null;
-        public int stuckInChunkIndex;
-    
+        public int stuckInChunkIndex = -1;
+
+
+
+        public PhysicalObject.Appendage.Pos? stuckInAppendage = null;
+
+
         public BodyChunk connectedChunk;
         public PhysicalObject owner => connectedChunk.owner;
         public bool IsAttached => mode == PendulumMode.Attached;
         public bool IsAttachedToWall => mode == PendulumMode.Attached && stuckInObject is null;
         public float attachedLength = 0f;
         public float ropeLength = MAX_ROPELENGTH;
-        public bool grabAndPutInInventory = false;
+        public bool retractImmidietly = false;
         public const float MAX_ROPELENGTH = 7 * 20f;
         public const float MIN_ROPELENGTH = 4 * 20f;
         public readonly int pendulumIndex;
@@ -321,9 +355,11 @@ namespace Scavolution
             if (stuckInObject != null) getStuckPendulums(stuckInObject).Remove(this);
             stuckInObject = null;
             stuckInChunkIndex = -1;
+            stuckInAppendage = null;
+            attachedLength = 0f;
             flailMomentum = 0f;
             ropeLength = MAX_ROPELENGTH;
-            grabAndPutInInventory = false;
+            retractImmidietly = false;
         }
 
         public void Release()
@@ -346,12 +382,14 @@ namespace Scavolution
             retractingAbsolutelastPosition = AbsoluteLastPosition;
             mode = PendulumMode.Retracting;
             ticksSinceModeChange = 0;
+            attachedLength = 0f;
             flailMomentum = 0f;
-            grabAndPutInInventory = false;
+            retractImmidietly = false;
 
             if (stuckInObject != null) getStuckPendulums(stuckInObject).Remove(this);
             stuckInObject = null;
             stuckInChunkIndex = -1;
+            stuckInAppendage = null;
         }
 
         public void Update(bool eu)
@@ -359,56 +397,73 @@ namespace Scavolution
             ticksSinceModeChange++;
             if (mode == PendulumMode.Attached)
             {
+                if (retractImmidietly)
+                {
+                    ropeLength = 0f; // retract immidietly.
+                }
+
                 AirSoundLoop.sound = SoundID.None;
                 if (stuckInObject != null)
                 {
-                    if ((stuckInObject.slatedForDeletetion || owner.room != stuckInObject.room))
+
+                    if ((stuckInObject.slatedForDeletetion || owner.room != stuckInObject.room || !owner.room.updateList.Contains(stuckInObject)))
                     {
                         Release();
                     }
                     else
                     {
-                        foreach (Creature.Grasp grasp in stuckInObject.grabbedBy.ToList()) grasp.Release();
-                    }
-
-
-                    if (stuckInObject is Weapon weapon)
-                    {
-                        weapon.mode = Weapon.Mode.Free;
-                    }
-
-                    if (stuckInObject is SporePlant plant)
-                    {
-                        if (plant.stalk != null)
+                        foreach (Creature.Grasp grasp in stuckInObject.grabbedBy.ToList()) 
                         {
-                            plant.stalk.sporePlant = null;
-                            if (!plant.AbstrSporePlant.isConsumed) plant.AbstrSporePlant.Consume();
-                        }
-                    }
-
-                    if (stuckInObject is DangleFruit fruit)
-                    {
-                        if (fruit.stalk != null)
-                        {
-                            fruit.stalk.fruit = null;
-                            if (!fruit.AbstrConsumable.isConsumed) fruit.AbstrConsumable.Consume();
-                        }
-                    }
-                    
-
-                    foreach (Player.AbstractOnBackStick stick in stuckInObject.abstractPhysicalObject.stuckObjects.OfType<Player.AbstractOnBackStick>().ToList())
-                    {
-                        if (stick.A.realizedObject is Player p)
-                        {
-                            if (p.spearOnBack?.spear == stuckInObject)
+                            if (grasp.grabber is Scavenger && owner is Creature critter)
                             {
-                                p.spearOnBack.DropSpear();
+                                owner.room.socialEventRecognizer.Theft(grasp.grabbed, critter, grasp.grabber);
                             }
 
-                            stick.Deactivate();
+                            grasp.Release();
                         }
+                        
+                        if (stuckInObject is PoleMimic mimic)
+                        {
+                            mimic.angeredAndAggressive = Mathf.Max(mimic.angeredAndAggressive, 80);
+                        }
+
+                        if (stuckInObject is Weapon weapon)
+                        {
+                            weapon.ChangeMode(Weapon.Mode.Free);
+                        }
+
+                        if (stuckInObject is SporePlant plant)
+                        {
+                            if (plant.stalk != null)
+                            {
+                                plant.stalk.sporePlant = null;
+                                if (!plant.AbstrSporePlant.isConsumed) plant.AbstrSporePlant.Consume();
+                            }
+                        }
+
+                        if (stuckInObject is DangleFruit fruit)
+                        {
+                            if (fruit.stalk != null)
+                            {
+                                fruit.stalk.fruit = null;
+                                if (!fruit.AbstrConsumable.isConsumed) fruit.AbstrConsumable.Consume();
+                            }
+                        }
+                        
+                        foreach (Player.AbstractOnBackStick stick in stuckInObject.abstractPhysicalObject.stuckObjects.OfType<Player.AbstractOnBackStick>().ToList())
+                        {
+                            if (stick.A.realizedObject is Player p)
+                            {
+                                if (p.spearOnBack?.spear == stuckInObject)
+                                {
+                                    p.spearOnBack.DropSpear();
+                                }
+
+                                stick.Deactivate();
+                            }
+                        }
+                        
                     }
-                
                 }
     
                 Elasticity(eu);
@@ -479,7 +534,6 @@ namespace Scavolution
                 AirSoundLoop.sound = SoundID.None;
             }
         }
-
         public bool HitThisObject(PhysicalObject obj)
         {
             if (obj is Scavenger scav)
@@ -491,7 +545,7 @@ namespace Scavolution
             }
             
             if (obj == owner) return false;
-            return obj.canBeHitByWeapons && obj.abstractPhysicalObject.IsSameRippleLayer(owner.abstractPhysicalObject.rippleLayer);
+            return (retractImmidietly || obj.canBeHitByWeapons) && obj.abstractPhysicalObject.IsSameRippleLayer(owner.abstractPhysicalObject.rippleLayer);
 
         }
 
@@ -581,7 +635,7 @@ namespace Scavolution
             return null;
         }
 
-        public void Send(Vector2 directionAndLength, bool hitBodyChunks = true, float flailCharge = 0f, bool pacifist = false, bool attach = true)
+        public void Send(Vector2 directionAndLength, bool hitBodyChunks = true, float flailCharge = 0f, bool pacifist = false, bool grab = false, bool attach = true, bool hitAppendages = false)
         {
             if (owner.room is null) return;
             owner.room.PlaySound(SoundID.Slugcat_Throw_Rock, new PendulumSoundEmitter(this, 1.0f, 1.0f), false, 1.0f, 1.0f, false);
@@ -598,6 +652,7 @@ namespace Scavolution
                     rayorigin = Vector2.MoveTowards(rayorigin, raydest, 19f);
                 }
             }
+            
 
             // Vector2? rayresult = SharedPhysics.ExactTerrainRayTracePos(owner.room, rayorigin, raydest);
             Vector2? exactRayResult;
@@ -618,19 +673,43 @@ namespace Scavolution
                 exactRayResult = new Vector2(raytrace.Value.left, raytrace.Value.bottom);
                 normal = -new Vector2(raytrace.Value.right, raytrace.Value.top);
             }
+            
+            int stablility_chunk = -1;
+            if (owner is Scavenger)
+            {
+                stablility_chunk = 1;
+            }
 
-            connectedChunk.vel += directionAndLength.normalized * (Mathf.Pow(directionAndLength.magnitude, 0.25f) / connectedChunk.mass);
-
+            Vector2 followThrough = directionAndLength.normalized * (Mathf.Pow(directionAndLength.magnitude, 0.25f) / connectedChunk.mass);
+            if (stablility_chunk > 0)
+            {
+                owner.WeightedPush(connectedChunk.index, stablility_chunk, followThrough, 1f);
+            }
+            else
+            {
+                connectedChunk.vel += followThrough;
+            }
+            this.retractImmidietly = grab;
 
             SharedPhysics.CollisionResult result = new(null, null, null, exactRayResult is not null, exactRayResult ?? default);
             if (hitBodyChunks)
             {
                 Vector2 raydest2 = exactRayResult ?? raydest;
-                var result2 = SharedPhysics.TraceProjectileAgainstBodyChunks(this, owner.room, rayorigin, ref raydest2, 3f, owner.collisionLayer, owner, false);
+                var result2 = SharedPhysics.TraceProjectileAgainstBodyChunks(this, owner.room, rayorigin, ref raydest2, grab? 10f : 3f, owner.collisionLayer, owner, hitAppendages);
                 if (result2.hitSomething)
                 {
                     result = result2;
                     normal = (raydest2 - result.collisionPoint).normalized;
+                }
+
+                if (grab)
+                {
+                    var result3 = SharedPhysics.TraceProjectileAgainstBodyChunks(this, owner.room, rayorigin, ref raydest2, grab? 10f : 3f, 2, owner, hitAppendages); // check for weapons
+                    if (result3.hitSomething)
+                    {
+                        result = result3;
+                        normal = (raydest2 - result.collisionPoint).normalized;
+                    }
                 }
 
             }
@@ -720,7 +799,6 @@ namespace Scavolution
                         }
                     }
                 }
-
                 HitSomething(result, directionAndLength, normal, flailDamage, attach);
             }
             else
@@ -731,7 +809,8 @@ namespace Scavolution
             }
         }
 
-        private void PendulumHitChunk(ref bool attach, float damageMultiplier, ref SharedPhysics.CollisionResult collision)
+
+        private void PendulumHitObject(ref bool attach, float damageMultiplier, ref SharedPhysics.CollisionResult collision)
         {
             if (stuckInObject is null) return;
             if (stuckInObject is DaddyLongLegs)
@@ -744,15 +823,17 @@ namespace Scavolution
                 loach.Die();
             }
 
-
-            var chunk = stuckInObject.bodyChunks[stuckInChunkIndex];
-
-            Vector2 forceDirection = (chunk.pos - RestPosition).normalized;
+            BodyChunk? chunk = stuckInAppendage == null? stuckInObject.bodyChunks[stuckInChunkIndex] : null;
+            Vector2 forceDirection = (collision.collisionPoint - RestPosition).normalized;
             float decreasingMultiplier = damageMultiplier > 1f ? Mathf.Pow(damageMultiplier, 0.7f) : damageMultiplier;
             Vector2 force = forceDirection * 20f * decreasingMultiplier;
 
             bool violence = damageMultiplier > 0;
-            chunk.pos += forceDirection * 2f / chunk.mass;
+            if (chunk != null)
+            {
+                chunk.pos += forceDirection * 2f / chunk.mass;
+            }
+            
 
             if (stuckInObject is Creature critter)
             {
@@ -762,14 +843,13 @@ namespace Scavolution
                     priorityPull = 0.9f;
                 }
 
-                if (owner is Creature mycritter) critter.SetKillTag(mycritter.abstractCreature);
-                if (critter is Lizard lizard)
+                if (chunk != null && critter is Lizard lizard)
                 {
                     if (chunk.index == 0 && (!attach || lizard.HitHeadShield(forceDirection)))
                     {
                         owner.room.AddObject(new Spark(collision.collisionPoint, Custom.RNV() * 60f * UnityEngine.Random.value, Color.white, null, 20, 50));
                         if (!attach) owner.room.PlaySound(SoundID.Lizard_Head_Shield_Deflect, lizard.mainBodyChunk);
-                        if (violence) critter.Violence(null, null, chunk, null, Creature.DamageType.Blunt, 0.3f * damageMultiplier, 60 * decreasingMultiplier);
+                        if (violence) critter.Violence(connectedChunk, null, chunk, null, Creature.DamageType.Blunt, 0.3f * damageMultiplier, 60 * decreasingMultiplier);
                         chunk.vel += force / chunk.mass;
 
                         if (lizard.abstractCreature.creatureTemplate.type != CreatureTemplate.Type.RedLizard)
@@ -788,22 +868,31 @@ namespace Scavolution
                     {
                         chunk.vel += force / chunk.mass;
                         owner.room.PlaySound(SoundID.Spear_Stick_In_Creature, new PendulumSoundEmitter(this, 1.0f, 1.0f), false, 1.0f, 1.0f, false);
-                        if (violence) critter.Violence(null, null, chunk, null, Creature.DamageType.Stab, 1.4f * damageMultiplier, 60 * decreasingMultiplier);
+                        if (violence) critter.Violence(connectedChunk, null, chunk, null, Creature.DamageType.Stab, 1.4f * damageMultiplier, 60 * decreasingMultiplier);
                     }
 
 
                 }
-                else if (attach && critter.SpearStick(null, 0.7f, chunk, null, forceDirection))
+                else if (attach && critter.SpearStick(null, 0.7f, chunk, stuckInAppendage, forceDirection))
                 {
                     owner.room.AddObject(new WaterDrip(collision.collisionPoint, -forceDirection * 20f * UnityEngine.Random.value * 0.5f + Custom.DegToVec(360f * UnityEngine.Random.value) * forceDirection * 20f * UnityEngine.Random.value * 0.5f, waterColor: false));
-                    if (violence) critter.Violence(null, null, chunk, null, Creature.DamageType.Stab, 0.7f * damageMultiplier, 60 * decreasingMultiplier);
+                    if (violence) critter.Violence(connectedChunk, null, chunk, null, Creature.DamageType.Stab, 0.7f * damageMultiplier, 60 * decreasingMultiplier);
                     if (critter.State is PlayerState pstate)
                     {
                         pstate.permanentDamageTracking += 0.7f * damageMultiplier;
                         if (pstate.permanentDamageTracking > 1.0f) critter.Die();
                     }
+                    
+                    if (chunk != null)
+                    {
+                        chunk.vel += force / chunk.mass;
+                    }
 
-                    chunk.vel += force / chunk.mass;
+                    if (stuckInAppendage != null)
+                    {
+                        stuckInAppendage.appendage.ownerApps.ApplyForceOnAppendage(stuckInAppendage, force);
+                    }
+                    
                 }
                 else
                 {
@@ -816,10 +905,19 @@ namespace Scavolution
                     }
                     else
                     {
-                        if (violence) critter.Violence(null, null, chunk, null, Creature.DamageType.Blunt, 0.7f * damageMultiplier, 45 * decreasingMultiplier);
+                        if (violence) critter.Violence(connectedChunk, null, chunk, null, Creature.DamageType.Blunt, 0.7f * damageMultiplier, 45 * decreasingMultiplier);
                     }
+                    if (chunk != null)
+                    {
+                        chunk.vel += (force / chunk.mass) * forcem;
+                    }
+
+                    if (stuckInAppendage != null)
+                    {
+                        stuckInAppendage.appendage.ownerApps.ApplyForceOnAppendage(stuckInAppendage, force * forcem);
+                    }
+
                     
-                    chunk.vel += (force / chunk.mass) * forcem;
                     attach = false;
                 }
             }
@@ -830,7 +928,15 @@ namespace Scavolution
                     priorityPull = 1.0f;
                 }
 
-                chunk.vel += forceDirection * 3f;
+                if (chunk != null)
+                {
+                    chunk.vel += (force / chunk.mass) * 3f;
+                }
+
+                if (stuckInAppendage != null)
+                {
+                    stuckInAppendage.appendage.ownerApps.ApplyForceOnAppendage(stuckInAppendage, force * 3f);
+                }
             }
 
             if (violence && attach)
@@ -851,8 +957,8 @@ namespace Scavolution
             ScavolutionPlugin.pubLogger?.LogDebug(attach);
             
 
-
-            if (collision.chunk is null)
+            attachedLength = Custom.Dist(AbsolutePosition, RestPosition);
+            if (collision.chunk is null && collision.onAppendagePos is null)
             {
                 if (!attach)
                 {
@@ -864,18 +970,23 @@ namespace Scavolution
                 }
 
                 absoluteAttachedPosition = collision.collisionPoint;
-                attachedLength = Custom.Dist(AbsolutePosition, RestPosition);
                 owner.room.AddObject(new Spark(collision.collisionPoint, Custom.RNV() * 60f * UnityEngine.Random.value,
                     Color.black, null, 20, 50));
             }
             else
             {
                 stuckInObject = collision.obj;
-                stuckInChunkIndex = collision.chunk.index;
+                if (collision.chunk is not null)
+                {
+                    stuckInChunkIndex = collision.chunk.index;
+                }
+                else
+                {
+                    stuckInAppendage = collision.onAppendagePos;
+                }
+                
                 getStuckPendulums(stuckInObject).Add(this);
-
-                attachedLength = Custom.Dist(AbsolutePosition, RestPosition);
-                PendulumHitChunk(ref attach, damageMultiplier, ref collision);
+                PendulumHitObject(ref attach, damageMultiplier, ref collision);
             }
 
 
@@ -927,8 +1038,18 @@ namespace Scavolution
             var difference = RestPosition - AbsolutePosition;
             if (difference.sqrMagnitude > ropeLength * ropeLength)
             {
-                var stuckInChunk = stuckInObject?.bodyChunks[stuckInChunkIndex];
-                float ourWeight = stuckInObject is null ? 0f : owner.TotalMass / (owner.TotalMass + stuckInObject.TotalMass);
+                float ourWeight;
+                BodyChunk? stuckInChunk = null; 
+                if (stuckInAppendage is null)
+                {
+                    stuckInChunk = stuckInObject?.bodyChunks[stuckInChunkIndex];
+                    ourWeight = stuckInObject is null ? 0f : owner.TotalMass / (owner.TotalMass + stuckInObject.TotalMass);
+                }
+                else
+                {
+                    ourWeight = 0.8f;
+                }
+                
 
                 if (priorityPull > 0f)
                 {
@@ -963,6 +1084,11 @@ namespace Scavolution
                 {
                     stuckInChunk.vel += stuckOpposingVel * correctionDir; // remove existing opposing vel
                     stuckInChunk.vel -= totalOpposingVel * correctionDir; // replace it with total opposing vel as a momentum union.
+                }
+                
+                if (stuckInAppendage is not null)
+                {
+                    stuckInAppendage.appendage.ownerApps.ApplyForceOnAppendage(stuckInAppendage, stuckOpposingVel * correctionDir - totalOpposingVel * correctionDir);
                 }
 
                 float positionalRestraint = 0.1f;
@@ -1131,16 +1257,37 @@ namespace Scavolution
                     if (pendulum.mode == ImperialPendulum.PendulumMode.Attached)
                     {
                         float x = Custom.Dist(baseInterp, b) / 20f;
-                        const float j = 60f;
+                        const float j = 40f;
                         const float c = 1.5f;
                         float k = 1f - Math.Min(1.0f, pendulum.ticksSinceModeChange / 10f);
-                        float extralen = Mathf.Max(pendulum.attachedLength - (pendulum.ropeLength + 20f), 0f);
-                        k *= Math.Min(extralen / (20f * 7f), 1.0f);
+                        // float extralen = Mathf.Max(pendulum.attachedLength - (pendulum.ropeLength + 20f), 0f);
+                        // k *= Math.Min(extralen / ImperialPendulum.MIN_ROPELENGTH, 1.0f);
 
                         // LaTex
                         // \frac{jk}{x\ +\ 1}\sin\left(\pi ck\ln\left(x\ +\ 1\right)\right)\left\{x\ >\ 0\right\}
 
                         float offset = (j * k) * t * Mathf.Sin(Mathf.PI * c * k * Mathf.Log(x + 1));
+
+                        float lerptohandDist = 20f * 4f;
+                        float disttohand = Custom.DistNoSqrt(baseInterp, a);
+                        if (disttohand < (lerptohandDist * lerptohandDist))
+                        {
+                            Mathf.Lerp(offset, 0f, Mathf.Sqrt(disttohand) / lerptohandDist);
+                        }
+                        return baseInterp + perpAB * offset;
+                    }
+
+                    else if (pendulum.mode == ImperialPendulum.PendulumMode.Retracting)
+                    {
+                        float x = Custom.Dist(baseInterp, b) / 20f;
+                        const float j = 40f;
+                        const float c = 1.5f;
+                        float k = Math.Min(1.0f, pendulum.ticksSinceModeChange / 10f);
+
+                        // LaTex
+                        // \frac{jk}{x\ +\ 1}\sin\left(\pi ck\ln\left(x\ +\ 1\right)\right)\left\{x\ >\ 0\right\}
+            
+                        float offset = (j * k) * t * Mathf.Sin(Mathf.PI * c * k * Mathf.Log(x + 1) + Time.time*10);
 
                         float lerptohandDist = 20f * 4f;
                         float disttohand = Custom.DistNoSqrt(baseInterp, a);
@@ -1495,8 +1642,25 @@ namespace Scavolution
                     var rel = self.AI.DynamicRelationship(critter.abstractCreature);
                     // if (rel.GoForKill || rel.type == CreatureTemplate.Relationship.Type.Afraid) return true; // TODO: impelement slice attack.
                 }
-                if (pendulum.grabAndPutInInventory) return true;
+                if (pendulum.retractImmidietly) return true;
                 return pendulum.ticksSinceModeChange < 2 * 40f;
+            }
+
+            return true;
+        }
+
+
+        public bool NotSlugcatPlayableGrabability(Scavenger scav, PhysicalObject obj)
+        {
+            if (SprobDesecratingGraves.ScavengerHooks.GetScavengerData(scav) is ObjectDataTypes.ScavengerData scavdata)
+            {
+                if (scavdata.controller != null)
+                {
+                    if (scavdata.controller.Grabability(obj) <= Player.ObjectGrabability.CantGrab)
+                    {
+                        return false;
+                    } 
+                }
             }
 
             return true;
@@ -1674,6 +1838,21 @@ namespace Scavolution
                 // controlled stuff
                 if (ControlledScavenger(self.abstractCreature))
                 {
+                    if (self.inputWithoutDiagonals.HasValue && self.inputWithoutDiagonals.Value.spec)
+                    {
+                        if (claws.pendulums.All(x => ScavengerImperial_HandFree(self, x.pendulumIndex)))
+                        {
+                            if (claws.pendulums.FirstOrDefault() is ImperialPendulum pendulum)
+                            {
+                                if (pendulum.flailTimer <= 0)
+                                {
+                                    pendulum.BeginFlail();
+                                }
+                            }
+                        }
+                    }
+
+
                     if (self.abstractCreature.world.game.cameras[0].room == self.room)
                     {
                         for (int i = 0; i < claws.wasmouseDown.Count() && self.Consious; i++)
@@ -1692,7 +1871,8 @@ namespace Scavolution
                                         }
                                         else
                                         {
-                                            claws.pendulums[i].Send(((Vector2)Futile.mousePosition + self.room.game.cameras[0].pos - claws.pendulums[0].RestPosition) * 1.2f, true);
+                                            claws.pendulums[i].Send(((Vector2)Futile.mousePosition + self.room.game.cameras[0].pos - claws.pendulums[0].RestPosition) * 1.2f, true, 0, self.inputWithoutDiagonals?.pckp ?? false, self.inputWithoutDiagonals?.pckp ?? false, true, 
+                                                true);
                                         }
                                     }
                                     else if (i == 2)
@@ -1705,7 +1885,8 @@ namespace Scavolution
                                             }
                                             else
                                             {
-                                                claws.pendulums[j].Send(((Vector2)Futile.mousePosition + self.room.game.cameras[0].pos - claws.pendulums[0].RestPosition) * 1.2f, true);
+                                                claws.pendulums[i].Send(((Vector2)Futile.mousePosition + self.room.game.cameras[0].pos - claws.pendulums[0].RestPosition) * 1.2f, true, 0, self.inputWithoutDiagonals?.pckp ?? false, self.inputWithoutDiagonals?.pckp ?? false, true, 
+                                                    true);
                                             }
                                         }
                                     }
@@ -1792,25 +1973,32 @@ namespace Scavolution
                     }
 
 
-
-                    if (pendulum.stuckInObject is PhysicalObject obj)
+                    if (pendulum.retractImmidietly)
                     {
-                        if (pendulum.grabAndPutInInventory)
+                        if (Custom.DistLess(pendulum.RestPosition, pendulum.AbsolutePosition, 2f * 20f))
                         {
-                            pendulum.ropeLength = 0; // retract immidietly
-                            if (Custom.DistLess(pendulum.RestPosition, obj.firstChunk.pos, 2f * 20f))
+                            if (pendulum.stuckInObject is PhysicalObject obj)
                             {
-                                self.PickUpAndPlaceInInventory(obj);
-                                pendulum.Reset();
-                            }
-                        }
+                                bool canGrab = pendulum.stuckInAppendage is null;
+                                if (ScavolutionPlugin.NotSlugcatPlayables && canGrab)
+                                {
+                                    canGrab = canGrab && NotSlugcatPlayableGrabability(self, pendulum.stuckInObject);
+                                    self.PickUpAndPlaceInInventory(obj);
+                                }
+                            }    
 
-                        if (self.grasps.OfType<Creature.Grasp>().Select(x => x.grabbed).Contains(pendulum.stuckInObject))
-                        {
                             pendulum.Reset();
                         }
                     }
+                    
+
+                    if (pendulum.stuckInObject is not null && self.grasps.OfType<Creature.Grasp>().Select(x => x.grabbed).Contains(pendulum.stuckInObject))
+                    {
+                        pendulum.Reset();
+                    }
                 }
+
+                
 
                 if ((activependulumCount > 0 || self.movMode == SEScavengerMovementModes.Swinging) && ScavengerPendulum_OffGround(self))
                 {
@@ -1841,7 +2029,12 @@ namespace Scavolution
             }
 
             if (self.movMode == SEScavengerMovementModes.Swinging)
-            {
+            {  
+                if (ControlledScavenger(self.abstractCreature))
+                {
+                    self.mainBodyChunk.vel.x += (self.inputWithDiagonals?.x ?? 0f) * 0.8f;
+                }
+
                 self.stuckCounter = 0;
                 self.AI.Update();
                 self.CombatUpdate();
@@ -1949,7 +2142,7 @@ namespace Scavolution
                         grabpendulum.HitSomething(hit, obj.firstChunk.pos - grabpendulum.RestPosition, Vector2.zero, 0f, true);
                         grabpendulum.priorityPull = Mathf.Max(grabpendulum.priorityPull, 0.7f);
                         grabpendulum.ropeLength = 0;
-                        grabpendulum.grabAndPutInInventory = true;
+                        grabpendulum.retractImmidietly = true;
                     }
                     return true;
                 }
@@ -1981,6 +2174,11 @@ namespace Scavolution
             }
             else
             {
+                if (ScavengerBearClaws.GetClaws(self) is ScavengerBearClaws claws && claws.pendulums[0].mode != ImperialPendulum.PendulumMode.Rest)
+                {
+                    return;
+                }
+
                 orig(self, aimChunk, violenceType, aimPosition);
             }
         }
@@ -2009,7 +2207,7 @@ namespace Scavolution
 
                 if (shouldAttackWithFlail)
                 {
-                    if (ScavengerBearClaws.GetClaws(self) is ScavengerBearClaws claws && self.movMode != SEScavengerMovementModes.Swinging)
+                    if (ScavengerBearClaws.GetClaws(self) is ScavengerBearClaws claws)
                     {
                         if (claws.pendulums.All(x => ScavengerImperial_HandFree(self, x.pendulumIndex)))
                         {

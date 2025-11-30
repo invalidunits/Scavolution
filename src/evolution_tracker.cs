@@ -38,13 +38,15 @@ namespace Scavolution
 
         public void CheckSuccess(bool inDen)
         {
+
             UnityEngine.Debug.Log($"Cheking Upgrade {inDen}");
             if (!AI.TryGetTarget(out var scavAI)) return;
+            if (ScavolutionPlugin.isPlayer(scavAI.parent, out _)) return;
             for (int i = scavAI.parent.stuckObjects.Count - 1; i >= 0; i--)
             {
                 if (scavAI.parent.stuckObjects[i] is AbstractPhysicalObject.CreatureGripStick && scavAI.parent.stuckObjects[i].A == scavAI.parent)
                 {
-                    if (EvolutionTree.TryGetEvolution(scavAI.parent.creatureTemplate.type, scavAI.parent.stuckObjects[i].B.type, out var evolution))
+                    if (EvolutionTree.TryGetEvolution(scavAI.parent.creatureTemplate.type, scavAI.parent.stuckObjects[i].B, out var evolution))
                     {
                         foreach (var helper in evolutionHelpers.Where(x =>
                             {
@@ -79,7 +81,7 @@ namespace Scavolution
                 foreach (AbstractPhysicalObject.CreatureGripStick stick in scavAI.parent.stuckObjects.OfType<AbstractPhysicalObject.CreatureGripStick>())
                 {
                     if (stick.B == scavAI.parent) continue;
-                    if (!scavAI.parent.TryGetEvolution(stick.B.type, out _)) continue;
+                    if (!scavAI.parent.TryGetEvolution(stick.B, out _)) continue;
                     upgradeOpertunity = true;
                 }
             }

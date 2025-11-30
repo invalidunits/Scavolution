@@ -5,6 +5,7 @@ using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
 using RWCustom;
+using SprobDesecratingGraves;
 using UnityEngine;
 
 namespace Scavolution
@@ -58,14 +59,13 @@ namespace Scavolution
         public void ScavengerImperial_ScavengerAI_ctor(On.ScavengerAI.orig_ctor orig, ScavengerAI self, AbstractCreature creature, World world)
         {
             orig(self, creature, world);
-            // if (SECreatureEnums.ScavengerImperial != null)
-            // {
-            //     if (creature.creatureTemplate.type == SECreatureEnums.ScavengerImperial)
-            //     {
-            //         self.AddModule(new SuperHearing(self, self.tracker, 350f * self.scavenger.reactionSkill*0.5f));
-            //     }
-            // }
-            
+            if (SECreatureEnums.ScavengerImperial != null)
+            {
+                if (creature.creatureTemplate.type == SECreatureEnums.ScavengerImperial)
+                {
+                    self.AddModule(new SuperHearing(self, self.tracker, 350f * self.scavenger.reactionSkill*0.5f));
+                }
+            }
         }
 
         void ScavengerImperial_Scavenger_SetUpCombatSkills(On.Scavenger.orig_SetUpCombatSkills orig, Scavenger self)
@@ -295,7 +295,20 @@ namespace Scavolution
         static public bool isImperial(this Scavenger scav)
         {
             if (SECreatureEnums.ScavengerImperial is null) return false;
+            if (ScavolutionPlugin.NotSlugcatPlayables)
+            {
+                if (isImperial_NSP(scav))
+                {
+                    return true;
+                }
+            }
             return scav.abstractCreature.creatureTemplate.type == SECreatureEnums.ScavengerImperial;
+        }
+
+        static private bool isImperial_NSP(Scavenger scav)
+        {
+            var data = scav.abstractCreature.GetScavengerData();
+            return data?.controller is not null && data.controller.SlugCatClass == ScavolutionPlugin.PlayerImperial;
         }
     }
 }

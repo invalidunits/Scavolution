@@ -60,15 +60,16 @@ namespace Scavolution
 
                     Logger.LogDebug("Finished registering Enums.");
 
+                    RegisterCreatures();
+                    Logger.LogDebug("Finished registering creatures");
+
+                    SaveHooks();
+                    Logger.LogDebug("Finished Hooking Saving.");
 
                     ScavengerAIHooks();
                     Logger.LogDebug("Finished Hooking AI.");
 
-                    RegisterCreatures();
-                    Logger.LogDebug("Finished registering scav junior");
-
-                    SaveHooks();
-                    Logger.LogDebug("Finished Hooking Saving.");
+                    
                 }
 
             }
