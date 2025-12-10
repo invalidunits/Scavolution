@@ -284,8 +284,8 @@ namespace Scavolution
             }
 
             scavenger = scav;
-            onback_map.Add(scav, this);
             ChangeOverlap(false);
+            onback_map.Add(scav, this);
             stick = new AbstractJuniorOnBackStick(owner.abstractCreature, scavenger.abstractCreature);
 
             if (scav.isJunior())
@@ -326,27 +326,35 @@ namespace Scavolution
 
         public void NotSlugcatPlayableRattatouillie(bool newOverlap)
         {
-            var onbackdata = scavenger.GetCreatureData();
-            var ownerdata = owner.GetCreatureData();
+            try
+            {
+                var onbackdata = scavenger.GetCreatureData();
+                var ownerdata = owner.GetCreatureData();
 
-            if (newOverlap)
-            {
-                if (onbackdata.controller is not null &&
-                    ownerdata.controller == onbackdata.controller && 
-                    onbackdata.controller.SlugCatClass == ScavolutionPlugin.PlayerJunior
-                    )
+                if (newOverlap)
                 {
-                    ownerdata.SetController(null);
+                    if (onbackdata.controller is not null &&
+                        ownerdata.controller == onbackdata.controller && 
+                        onbackdata.controller.SlugCatClass == ScavolutionPlugin.PlayerJunior
+                        )
+                    {
+                        ownerdata.SetController(null);
+                    }
                 }
-            }
-            else
-            {
-                if (onbackdata.controller is not null && ownerdata.controller is null && 
-                    onbackdata.controller.SlugCatClass == ScavolutionPlugin.PlayerJunior)
+                else
                 {
-                    ownerdata.SetController(onbackdata.controller);
+                    if (onbackdata.controller is not null && ownerdata.controller is null && 
+                        onbackdata.controller.SlugCatClass == ScavolutionPlugin.PlayerJunior)
+                    {
+                        ownerdata.SetController(onbackdata.controller);
+                    }
                 }
+            } 
+            catch (Exception except)
+            {
+                ScavolutionPlugin.pubLogger?.LogError(except);
             }
+            
         }
 
         public void Throw(bool eu)
@@ -561,6 +569,9 @@ namespace Scavolution
                                 if (creature.abstractCreature.GetAllConnectedObjects().Contains(scavenger.abstractCreature)) continue;
                                 if (!Custom.DistLess(scavenger.bodyChunks[1].pos, creature.mainBodyChunk.pos, range)) continue;
                                 if (!creature.Consious) continue;
+                                if (scavenger.isJunior() || creature.abstractCreature.creatureTemplate.type == CreatureTemplate.Type.Slugcat || 
+                                    creature.GetCreatureData().controller != null
+                                    ) continue;
                                 onBack.ScavtoBack(scavenger);
                                 return true;
                             }
@@ -664,11 +675,6 @@ namespace Scavolution
                     x => x.MatchCall(out _), // conversion float2 to Vector2
                     x => x.MatchStloc(14));
 
-
-                Logger.LogDebug(context.Method.Parameters[1].ParameterType);
-                Logger.LogDebug(context.Body.Variables[3].VariableType);
-                Logger.LogDebug(context.Body.Variables[14].VariableType);
-                Logger.LogDebug(context.Method.Parameters[3].ParameterType);
                 cursor.Emit(OpCodes.Ldarg_1);
                 cursor.Emit(OpCodes.Ldloc, 3);
                 cursor.Emit(OpCodes.Ldloc, 14);
@@ -1180,6 +1186,7 @@ namespace Scavolution
             if (attraction == AbstractRoom.CreatureRoomAttraction.Forbidden) return true;
             var fearOfPredators = currentRoom.creatures
                 .Except([scav.parent, grabber.parent])
+                .Where(x => x.state?.alive ?? false)
                 .Select(x => scav.parent.creatureTemplate.CreatureRelationship(x.creatureTemplate))
                 .Select(x =>
                 {
@@ -1191,18 +1198,13 @@ namespace Scavolution
 
             var roomfriendlyness = currentRoom.creatures
                 .Except([scav.parent, grabber.parent])
+                .Where(x => x.state?.alive ?? false)
                 .Select(x => scav.parent.creatureTemplate.CreatureRelationship(x.creatureTemplate))
                 .Select(x => x.type == CreatureTemplate.Relationship.Type.Pack ? x.intensity : 0f)
                 .Sum();
 
             var scavSanctuary = currentRoom.scavengerOutpost || currentRoom.scavengerTrader;
-            Logger.LogDebug("ABSTRACT WANT TO BE HELD");
-            Logger.LogDebug(AbstractRoom.CreatureAttractionToFloat(attraction));
-            Logger.LogDebug(scavSanctuary);
-            Logger.LogDebug(roomfriendlyness);
-            Logger.LogDebug(fearOfPredators);
-            
-            if (!scavSanctuary && (roomfriendlyness < 0.8f || fearOfPredators > 0.5f))
+            if (!scavSanctuary && (roomfriendlyness < 0.5f || fearOfPredators > 0.5f))
             {
                 if (AbstractRoom.CreatureAttractionToFloat(attraction) < scav.parent.personality.nervous) return true;
                 if (grabber.parent.personality.dominance > Mathf.Max(scav.parent.personality.dominance*1.5f, scav.parent.personality.dominance, 0)) return true;
@@ -1422,7 +1424,7 @@ namespace Scavolution
             Player.ObjectGrabability grabability = orig(self, obj);;
             try
             {
-                if (obj is Scavenger scav && scav.isJunior()) return Player.ObjectGrabability.BigOneHand;
+                if (obj is Scavenger scav && scav.isJunior() && self.SlugCatClass != ScavolutionPlugin.PlayerJunior) return Player.ObjectGrabability.BigOneHand;
 
                 if (obj.grabbedBy.FirstOrDefault() is Creature.Grasp grasp)
                 {

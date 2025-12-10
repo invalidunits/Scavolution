@@ -78,7 +78,7 @@ namespace Scavolution
                     StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.KingVulture,
                         new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 1.0f));
                     StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.RedLizard,
-                        new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Afraid, 0.5f));
+                        new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 1.0f));
                     StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, CreatureTemplate.Type.RedCentipede,
                         new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 1.0f));
                     
@@ -96,6 +96,14 @@ namespace Scavolution
                     if (ModManager.MSC)
                     {
                         StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, MoreSlugcats.MoreSlugcatsEnums.CreatureTemplateType.TrainLizard,
+                            new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 1.0f));
+                    }
+
+                    if (ModManager.Watcher)
+                    {
+                        StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, Watcher.WatcherEnums.CreatureTemplateType.Loach,
+                            new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 1.0f));
+                        StaticWorld.EstablishRelationship(SECreatureEnums.ScavengerImperial, Watcher.WatcherEnums.CreatureTemplateType.RotLoach,
                             new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Attacks, 1.0f));
                     }
                 }

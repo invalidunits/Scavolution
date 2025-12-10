@@ -32,7 +32,7 @@ namespace Scavolution
 
             On.PreyTracker.TrackedPrey.Attractiveness += ScavengerJunior_TrackedPrey_Attractiveness;
             On.ThreatTracker.Utility += ScavengerAI_ThreatTracker_Utility;
-            On.ScavengerAI.IdleScore += ScavengerJunior_ScavengerAI_IdleScore;
+            On.DiscomfortTracker.DiscomfortOfTile += ScavengerJunior_DiscomfortTracker_DiscomfortOfTile;
 
             // punishment for being a nuisence
             On.PhysicalObject.Grabbed += ScavengerJunior_PhysicalObject_Grabbed;
@@ -530,16 +530,20 @@ namespace Scavolution
             }
         }
 
-        public float ScavengerJunior_ScavengerAI_IdleScore(On.ScavengerAI.orig_IdleScore orig, ScavengerAI self, WorldCoordinate tstPs)
+        public float ScavengerJunior_DiscomfortTracker_DiscomfortOfTile(On.DiscomfortTracker.orig_DiscomfortOfTile orig, DiscomfortTracker self, WorldCoordinate tstPs)
         {
             float value = orig(self, tstPs);
             try
             {
-                if (self.creature.abstractAI.followCreature is not null && self.scavenger.isJunior())
+                if (self.AI is ScavengerAI scavAI)
                 {
-                    var distance = Custom.BetweenRoomsDistance(self.creature.world, tstPs, self.creature.abstractAI.followCreature.pos);	
-			        value -= Custom.LerpMap(distance, ScavengerParentTracker.desiredCloseness, ScavengerParentTracker.desiredCloseness*3f, 0f, 1000f);
+                    if (scavAI.creature.abstractAI.followCreature is not null && scavAI.scavenger.isJunior() && !AbstractBehaviorParams.getOrAdd((ScavengerAbstractAI)self.AI.creature.abstractAI).toldToStay)
+                    {
+                        var distance = Custom.BetweenRoomsDistance(scavAI.creature.world, tstPs, scavAI.creature.abstractAI.followCreature.pos);	
+                        value += Mathf.Pow(Mathf.Max(distance - ScavengerParentTracker.desiredCloseness, 0f), 0.8f);
+                    }
                 }
+                
             }
             catch (Exception except)
             {
@@ -556,25 +560,36 @@ namespace Scavolution
                 cursor.Emit(OpCodes.Ldarg_0);
                 cursor.EmitDelegate((ScavengerAI self) =>
                 {
-                    if (self.creature.abstractAI.followCreature?.realizedCreature is Player p)
+                    if (self.creature.abstractAI.followCreature is AbstractCreature follow_critter &&
+                        Custom.DistLess(self.tracker.RepresentationForCreature(follow_critter, true).BestGuessForPosition(),
+                            self.creature.pos, 5))
                     {
-                        if (p.input[0].jmp && !p.input[1].jmp && p.bodyMode != Player.BodyModeIndex.Default)
+                        if (follow_critter.realizedCreature is Player p)
                         {
-                            if (p.input[0].y == -1 && p.input[0].x == 0)
+                            if (p.input[0].jmp && !p.input[1].jmp && !p.standing)
                             {
-                                AbstractBehaviorParams.getOrAdd((ScavengerAbstractAI)self.creature.abstractAI).toldToStay = true;
+                                if (p.input[0].y == -1 && p.input[0].x == 0)
+                                {
+                                    AbstractBehaviorParams.getOrAdd((ScavengerAbstractAI)self.creature.abstractAI).toldToStay = true;
+                                }
                             }
                         }
-                    }
 
-                     if (self.creature.abstractAI.followCreature?.realizedCreature is Scavenger scav && scav.inputWithDiagonals.HasValue && scav.lastInputWithDiagonals.HasValue)
-                    {
-                        if (scav.inputWithDiagonals.Value.jmp && !scav.lastInputWithDiagonals.Value.jmp)
+                        if (follow_critter.realizedCreature is Scavenger scav && scav.inputWithDiagonals.HasValue && scav.lastInputWithDiagonals.HasValue)
                         {
-                            if (scav.inputWithDiagonals.Value.y == -1 && scav.inputWithDiagonals.Value.x == 0)
+                            if (scav.inputWithDiagonals.Value.jmp && !scav.lastInputWithDiagonals.Value.jmp)
                             {
-                                AbstractBehaviorParams.getOrAdd((ScavengerAbstractAI)self.creature.abstractAI).toldToStay = true;
+                                if (scav.inputWithDiagonals.Value.y == -1 && scav.inputWithDiagonals.Value.x == 0)
+                                {
+                                    AbstractBehaviorParams.getOrAdd((ScavengerAbstractAI)self.creature.abstractAI).toldToStay = true;
+                                }
                             }
+                        }
+
+                        if (AbstractBehaviorParams.getOrAdd((ScavengerAbstractAI)self.creature.abstractAI).toldToStay
+                            && self.creature.Room.scavengerOutpost)
+                        {
+                            ScavengerJunior_LoseCustody((ScavengerAbstractAI)self.creature.abstractAI, true);
                         }
                     }
 
@@ -699,10 +714,6 @@ namespace Scavolution
                         {
                             self.focusCreature = self.tracker.RepresentationForCreature(parentTracker.abstractParent, true);
                         }
-                    }
-                    else
-                    {
-                        AbstractBehaviorParams.getOrAdd((ScavengerAbstractAI)self.creature.abstractAI).toldToStay = false;
                     }
                 });
 
@@ -979,14 +990,14 @@ namespace Scavolution
             return true;
         }
 
-        public static void ScavengerJunior_LoseCustody(ScavengerAbstractAI junior)
+        public static void ScavengerJunior_LoseCustody(ScavengerAbstractAI junior, bool leftongoodterms = false)
         {
             if (junior.followCreature is not null)
             {
                 ScavolutionPlugin.pubLogger?.LogDebug($"{junior.followCreature} lost custody of {junior.parent} ");
                 if (junior.RealAI is ScavengerAI scavai && isPlayer(junior.followCreature, out _))
                 {
-                    ScavPlayerRelationChange(scavai, -0.25f, junior.followCreature);
+                    if (!leftongoodterms) ScavPlayerRelationChange(scavai, -0.25f, junior.followCreature);
                 }
 
             }

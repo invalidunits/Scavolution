@@ -63,7 +63,13 @@ namespace Scavolution
             {
                 if (creature.creatureTemplate.type == SECreatureEnums.ScavengerImperial)
                 {
-                    self.AddModule(new SuperHearing(self, self.tracker, 350f * self.scavenger.reactionSkill*0.5f));
+                    self.AddModule(new SuperHearing(self, self.tracker, 350f * self.scavenger.reactionSkill));
+                    self.AddModule(new SuperHearing(self, self.tracker, 350f * self.scavenger.reactionSkill));
+                    self.preyTracker.giveUpOnUnreachablePrey = 1800;
+                    self.preyTracker.sureToGetPreyDistance *= 2f;
+                    self.utilityComparer.GetUtilityTracker(self.preyTracker).exponent = 0.5f;
+                    self.utilityComparer.GetUtilityTracker(self.preyTracker).weight = 1.0f;
+                    
                 }
             }
         }

@@ -155,6 +155,11 @@ namespace Scavolution
                     list_recipes.Add(new EvolutionRecipe(DLCSharedEnums.CreatureTemplateType.ScavengerElite,
                         SECreatureEnums.ScavengerImperial, MoreSlugcats.MoreSlugcatsEnums.AbstractObjectType.MoonCloak, 1));
                 }
+                list_recipes.Add(new EvolutionRecipe(CreatureTemplate.Type.Scavenger,
+                    SECreatureEnums.ScavengerImperial, (AbstractPhysicalObject obj) =>
+                    {
+                        return obj is VultureMask.AbstractVultureMask mask && mask.king;
+                    }, 2));
 
                 list_recipes.Add(new EvolutionRecipe(DLCSharedEnums.CreatureTemplateType.ScavengerElite,
                     SECreatureEnums.ScavengerImperial, (AbstractPhysicalObject obj) =>

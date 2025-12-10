@@ -84,8 +84,6 @@ namespace Scavolution
                         }
                     });
                 }
-
-                Logger.LogDebug($"hooked {i} AbstractCreature constructors in {context.Method.Name}");
             }
             catch (Exception except)
             {
