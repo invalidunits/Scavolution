@@ -561,8 +561,8 @@ namespace Scavolution
                 cursor.EmitDelegate((ScavengerAI self) =>
                 {
                     if (self.creature.abstractAI.followCreature is AbstractCreature follow_critter &&
-                        Custom.DistLess(self.tracker.RepresentationForCreature(follow_critter, true).BestGuessForPosition(),
-                            self.creature.pos, 5))
+                        self.tracker.RepresentationForCreature(follow_critter, true) is Tracker.CreatureRepresentation rep &&
+                        Custom.DistLess(rep.BestGuessForPosition(), self.creature.pos, 5))
                     {
                         if (follow_critter.realizedCreature is Player p)
                         {
