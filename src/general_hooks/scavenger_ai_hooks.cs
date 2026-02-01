@@ -247,7 +247,7 @@ namespace Scavolution
                 {
                     return;
                 }
-                if (!objIsMe && objRep != null && objRep.representedCreature.creatureTemplate.type != CreatureTemplate.Type.Scavenger)
+                if (!objIsMe)
                 {
                     return;
                 }

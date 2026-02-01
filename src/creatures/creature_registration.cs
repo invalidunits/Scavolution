@@ -250,7 +250,7 @@ namespace Scavolution
             ScavengerJuniorTemplate.usesNPCTransportation = true;
             ScavengerJuniorTemplate.usesRegionTransportation = true;
             ScavengerJuniorTemplate.usesCreatureHoles = false;
-            ScavengerJuniorTemplate.jumpAction = "Point";
+            ScavengerJuniorTemplate.jumpAction = "Jump";
             ScavengerJuniorTemplate.pickupAction = "Pick Up";
             ScavengerJuniorTemplate.throwAction = "Throw";
             ScavengerJuniorTemplate.name = "Scavenger Junior";
@@ -295,13 +295,13 @@ namespace Scavolution
                 ScavengerImperialTemplate.stowFoodInDen = false;
                 ScavengerImperialTemplate.shortcutSegments = 2;
 
-                ScavengerImperialTemplate.visualRadius = 1000f*3f;
+                ScavengerImperialTemplate.visualRadius = 8000f;
                 ScavengerImperialTemplate.movementBasedVision = 0.3f;
 
                 ScavengerImperialTemplate.waterRelationship = CreatureTemplate.WaterRelationship.AirAndSurface;
                 ScavengerImperialTemplate.hibernateOffScreen = true;
-                ScavengerImperialTemplate.roamBetweenRoomsChance = -1f;
-                ScavengerImperialTemplate.roamInRoomChance = -1f;
+                ScavengerImperialTemplate.roamBetweenRoomsChance = 0.3f;
+                ScavengerImperialTemplate.roamInRoomChance = 0.3f;
                 ScavengerImperialTemplate.socialMemory = true;
                 ScavengerImperialTemplate.communityID = CreatureCommunities.CommunityID.Scavengers;
                 ScavengerImperialTemplate.communityInfluence = 1f;
@@ -311,7 +311,7 @@ namespace Scavolution
                 ScavengerImperialTemplate.usesNPCTransportation = true;
                 ScavengerImperialTemplate.usesRegionTransportation = true;
                 ScavengerImperialTemplate.usesCreatureHoles = false;
-                ScavengerImperialTemplate.jumpAction = "Point";
+                ScavengerImperialTemplate.jumpAction = "Jump";
                 ScavengerImperialTemplate.pickupAction = "Pick Up";
                 ScavengerImperialTemplate.throwAction = "Throw";
 

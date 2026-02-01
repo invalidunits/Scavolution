@@ -371,7 +371,6 @@ namespace Scavolution
             {
                 scav.SwitchGrasps(0, scavGrasp.graspUsed);
                 this.scavenger.Throw(new Vector2(this.scavenger.flip * 250f, 0f));
-                this.scavenger.ReleaseGrasp(0);
             }
             else
             {
@@ -843,6 +842,12 @@ namespace Scavolution
             orig(self, eu);
             try
             {
+                if (self.enteringShortCut.HasValue && self.grabbedBy.Any() && self.isJunior())
+                {
+                    self.enteringShortCut = null;
+                }
+
+
                 var onback = self.GetJuniorOnBack();
                 if (!ControlledScavenger(self.abstractCreature))
                 {
@@ -860,7 +865,7 @@ namespace Scavolution
                                 {
                                     grasp.Release();
                                 }
-                                else if (validtoDrop || ParentalParams.getOrAdd(scav.AI).wantCarryTimer > 100)
+                                else if (ParentalParams.getOrAdd(scav.AI).wantCarryTimer > 100)
                                 {
                                     if (onback.scavenger == null && !injured)
                                     {
@@ -1106,7 +1111,6 @@ namespace Scavolution
                 }
 
                 scav.abstractCreature.abstractAI.SetDestination(self.abstractCreature.abstractAI.destination);
-                scav.AI.pathFinder.SetDestination(self.abstractCreature.abstractAI.destination);
                 scav.AI.runSpeedGoal = self.AI.runSpeedGoal;
             }
         }
@@ -1145,31 +1149,24 @@ namespace Scavolution
                 ParentalParams.getOrAdd(scav).wantCarryTimer = 0;
                 return false;
             }
-            if (grabber.scavenger.Injured > 0f) return false;
+
+            
             if ((scav.creature.abstractAI as ScavengerAbstractAI)!.GoHome()) return false;
             if (ControlledScavenger(scav.creature)) return false;
             if (!ScavengerParentTracker.map.TryGetValue(scav, out var parentTracker)) return false;
-            if (scav.scared > 0.7) return true;
-            if (grabber.agitation > 0.7) return true;
-            if (parentTracker.unreachableCounter > 20) return true;
-            if (ScavengerJunior_AbstractWantToBeHeld((ScavengerAbstractAI)scav.creature.abstractAI, (ScavengerAbstractAI)grabber.creature.abstractAI)) return true;
+
+
+            if (ParentalParams.getOrAdd(grabber).parentalBloodlust > 0) return true;
+            if (ParentalParams.getOrAdd(scav).threatenedCounter > 0) return true;
+            if (scav.behavior != ScavengerAI.Behavior.Idle)
+            {
+                if (ScavengerJunior_AbstractWantToBeHeld((ScavengerAbstractAI)scav.creature.abstractAI, (ScavengerAbstractAI)grabber.creature.abstractAI)) return true;
+            }
             return false;
         }
         
         bool ScavengerJunior_IsValidDrop(ScavengerAI scav, ScavengerAI grabber)
         {
-            if (!scav.scavenger.room.aimap.TileAccessibleToCreature(grabber.creature.pos.x, grabber.creature.pos.y, scav.creature.creatureTemplate))
-            {
-                // please don't drop me into a pit
-                return false;
-            }
-
-            if (scav.scavenger.room.aimap.getAItile(grabber.creature.pos).floorAltitude > 2)
-            {
-                // please drop me on the ground
-                return false;
-            }
-            
             return true;
         }
 
@@ -1177,39 +1174,17 @@ namespace Scavolution
         {
             if (ControlledScavenger(scav.parent)) return false;
             // if (grabber.GoHome()) return true;
+            if (grabber.parent.state is HealthState parentHealth)
+            {
+                if (parentHealth.ClampedHealth < 0.75) return false;
+            }
+
             if (scav.GoHome()) return false;
             if (scav.parent.Room.offScreenDen) return false;
 
             var currentRoom = scav.parent.Room;
             var attraction = currentRoom.AttractionForCreature(scav.parent);
-            if (attraction == AbstractRoom.CreatureRoomAttraction.Avoid) return true;
-            if (attraction == AbstractRoom.CreatureRoomAttraction.Forbidden) return true;
-            var fearOfPredators = currentRoom.creatures
-                .Except([scav.parent, grabber.parent])
-                .Where(x => x.state?.alive ?? false)
-                .Select(x => scav.parent.creatureTemplate.CreatureRelationship(x.creatureTemplate))
-                .Select(x =>
-                {
-                    if (x.type == CreatureTemplate.Relationship.Type.Afraid) return x.intensity;
-                    if (x.type == CreatureTemplate.Relationship.Type.Uncomfortable) return x.intensity * 0.5;
-                    if (x.type == CreatureTemplate.Relationship.Type.SocialDependent) return x.intensity * 0.25;
-                    return 0f;
-                }).Sum();
-
-            var roomfriendlyness = currentRoom.creatures
-                .Except([scav.parent, grabber.parent])
-                .Where(x => x.state?.alive ?? false)
-                .Select(x => scav.parent.creatureTemplate.CreatureRelationship(x.creatureTemplate))
-                .Select(x => x.type == CreatureTemplate.Relationship.Type.Pack ? x.intensity : 0f)
-                .Sum();
-
-            var scavSanctuary = currentRoom.scavengerOutpost || currentRoom.scavengerTrader;
-            if (!scavSanctuary && (roomfriendlyness < 0.5f || fearOfPredators > 0.5f))
-            {
-                if (AbstractRoom.CreatureAttractionToFloat(attraction) < scav.parent.personality.nervous) return true;
-                if (grabber.parent.personality.dominance > Mathf.Max(scav.parent.personality.dominance*1.5f, scav.parent.personality.dominance, 0)) return true;
-            }
-            
+            if (AbstractRoom.CreatureAttractionToFloat(attraction) < Mathf.Max(scav.parent.personality.nervous, 0.35f)) return true;
             return false;
         }
 

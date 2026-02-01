@@ -89,7 +89,7 @@ namespace Scavolution
                     if (self.isJunior())
                     {
                         self.jumpFinders.Clear();
-                        foreach (Creature.Grasp grasp in self.grabbedBy)
+                        foreach (Creature.Grasp grasp in self.grabbedBy.ToList())
                         {
                             if (grasp.grabber is Player || grasp.grabber is Scavenger)
                             {

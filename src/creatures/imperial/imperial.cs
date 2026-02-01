@@ -26,7 +26,22 @@ namespace Scavolution
             On.ScavengerAbstractAI.ReGearInDen += ScavengerImperial_AbstractScavengerAI_ReGearInDen;
             On.ScavengerAI.ctor += ScavengerImperial_ScavengerAI_ctor;
             IL.Scavenger.FlyingWeapon += ScavengerImperial_FlyingWeapon_ctor;
+
+            On.Scavenger.Violence += ScavengerImperial_Violence;
         }
+
+        public void ScavengerImperial_Violence(On.Scavenger.orig_Violence orig, global::Scavenger self, global::BodyChunk source, Vector2? directionAndMomentum, global::BodyChunk hitChunk, global::PhysicalObject.Appendage.Pos hitAppendage, global::Creature.DamageType type, float damage, float stunBonus)
+        {
+            if (self.isImperial())
+            {
+                if (type == Creature.DamageType.Bite) damage = 0f;
+                if (hitChunk?.index == 2) damage /= 5f;
+            }
+
+            orig(self, source, directionAndMomentum, hitChunk, hitAppendage, type, damage, stunBonus);
+        }
+
+
         
         public void ScavengerImperial_FlyingWeapon_ctor(ILContext context)
         {
@@ -59,19 +74,14 @@ namespace Scavolution
         public void ScavengerImperial_ScavengerAI_ctor(On.ScavengerAI.orig_ctor orig, ScavengerAI self, AbstractCreature creature, World world)
         {
             orig(self, creature, world);
-            if (SECreatureEnums.ScavengerImperial != null)
+            if (self.scavenger.isImperial())
             {
-                if (creature.creatureTemplate.type == SECreatureEnums.ScavengerImperial)
-                {
-                    self.AddModule(new SuperHearing(self, self.tracker, 350f * self.scavenger.reactionSkill));
-                    self.AddModule(new SuperHearing(self, self.tracker, 350f * self.scavenger.reactionSkill));
-                    self.preyTracker.giveUpOnUnreachablePrey = 1800;
-                    self.preyTracker.sureToGetPreyDistance *= 2f;
-                    self.utilityComparer.GetUtilityTracker(self.preyTracker).exponent = 0.5f;
-                    self.utilityComparer.GetUtilityTracker(self.preyTracker).weight = 1.0f;
-                    
-                }
+                self.AddModule(new SuperHearing(self, self.tracker, 400f));
+                self.preyTracker.giveUpOnUnreachablePrey = 1800;
+                self.preyTracker.sureToLosePreyDistance += self.preyTracker.sureToGetPreyDistance;
+                self.preyTracker.sureToGetPreyDistance += self.preyTracker.sureToGetPreyDistance;
             }
+            
         }
 
         void ScavengerImperial_Scavenger_SetUpCombatSkills(On.Scavenger.orig_SetUpCombatSkills orig, Scavenger self)
@@ -80,9 +90,12 @@ namespace Scavolution
             if (self.isImperial())
             {
 
+                self.dodgeSkill = Mathf.Max(1.0f, self.dodgeSkill);
+                self.reactionSkill = Mathf.Max(1.0f, self.reactionSkill);
+
+                self.blockingSkill = Mathf.Max(0.33f, self.blockingSkill);
                 self.midRangeSkill = Mathf.Max(1.0f, self.midRangeSkill);
-                self.dodgeSkill = Mathf.Lerp(self.dodgeSkill, 1.0f, 0.7f);
-                self.reactionSkill = Mathf.Lerp(self.reactionSkill, 1.0f, 0.5f);
+                // self.meleeSkill = Mathf.Lerp(Mathf.Max(self.meleeSkill, 0.25f), 1.0f, 0.5f);
             }
         }
 
