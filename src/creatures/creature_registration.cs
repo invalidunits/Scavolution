@@ -311,7 +311,7 @@ namespace Scavolution
                 ScavengerImperialTemplate.usesNPCTransportation = true;
                 ScavengerImperialTemplate.usesRegionTransportation = true;
                 ScavengerImperialTemplate.usesCreatureHoles = false;
-                ScavengerImperialTemplate.jumpAction = "Jump";
+                ScavengerImperialTemplate.jumpAction = "Point";
                 ScavengerImperialTemplate.pickupAction = "Pick Up";
                 ScavengerImperialTemplate.throwAction = "Throw";
 
